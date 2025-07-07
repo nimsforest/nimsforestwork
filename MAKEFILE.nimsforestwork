@@ -1,0 +1,240 @@
+# =============================================================================
+# NimsforestWork - Work Management System
+# =============================================================================
+# 
+# This is a standalone Makefile for the nimsforestwork package.
+# It can be included in any project's main Makefile using:
+#   -include pkg/nimsforestwork/MAKEFILE.nimsforestwork
+#
+# Usage:
+#   make nimsforestwork-addtomainmakefile PROJECTDIR=/path/to/project
+#   make nimsforestwork-hello
+#   make nimsforestwork-init  
+#   make nimsforestwork-lint
+#
+
+.PHONY: nimsforestwork-hello nimsforestwork-init nimsforestwork-lint nimsforestwork-newissue nimsforestwork-addtomainmakefile nimsforestwork-removefromainmakefile
+
+# Check system compatibility for work management
+nimsforestwork-hello:
+	@echo "🌲 NimsforestWork System Compatibility Check"
+	@echo "============================================="
+	@echo ""
+	@echo "🔍 Checking required tools..."
+	@command -v git >/dev/null 2>&1 || (echo "❌ git not found - required for work management" && exit 1)
+	@echo "✅ git found: $$(git --version)"
+	@echo ""
+	@echo "📁 Checking repository status..."
+	@git rev-parse --git-dir >/dev/null 2>&1 || (echo "❌ Not in a git repository" && exit 1)
+	@echo "✅ Git repository detected"
+	@echo "   Branch: $$(git branch --show-current)"
+	@echo "   Remote: $$(git remote get-url origin 2>/dev/null || echo 'none')"
+	@echo ""
+	@echo "🎯 System compatible with nimsforestwork!"
+	@echo "   Ready for Netflix-style deployment workflow"
+	@echo ""
+	@echo "Next steps:"
+	@echo "  make nimsforestwork-init     - Initialize work folder structure"
+	@echo "  make nimsforestwork-newissue - Create a new work item interactively"
+	@echo "  make nimsforestwork-lint     - Validate work items"
+
+# Initialize work folder structure
+nimsforestwork-init:
+	@echo "🌲 Initializing NimsforestWork folder structure..."
+	@echo "=================================================="
+	@echo ""
+	@echo "📁 Creating work management folders in docs/work/..."
+	@mkdir -p docs/work/proposals/new docs/work/proposals/planned docs/work/proposals/active docs/work/proposals/ready docs/work/proposals/archive
+	@mkdir -p docs/work/bugs/new docs/work/bugs/planned docs/work/bugs/active docs/work/bugs/pendingfeedback docs/work/bugs/ready docs/work/bugs/archive
+	@mkdir -p docs/work/changerequests/new docs/work/changerequests/planned docs/work/changerequests/active docs/work/changerequests/pendingfeedback docs/work/changerequests/ready docs/work/changerequests/archive
+	@mkdir -p docs/work/improvedocumentation/new docs/work/improvedocumentation/planned docs/work/improvedocumentation/active docs/work/improvedocumentation/ready docs/work/improvedocumentation/archive
+	@echo "✅ Work folders created"
+	@echo ""
+	@echo "📝 Creating templates..."
+	@if [ ! -f docs/work/proposals/template.md ]; then \
+		cp pkg/nimsforestwork/templates/proposal.md docs/work/proposals/template.md; \
+		echo "✅ Proposal template created"; \
+	else \
+		echo "ℹ️  Proposal template already exists"; \
+	fi
+	@if [ ! -f docs/work/bugs/template.md ]; then \
+		cp pkg/nimsforestwork/templates/bug.md docs/work/bugs/template.md; \
+		echo "✅ Bug template created"; \
+	else \
+		echo "ℹ️  Bug template already exists"; \
+	fi
+	@if [ ! -f docs/work/changerequests/template.md ]; then \
+		cp pkg/nimsforestwork/templates/changerequest.md docs/work/changerequests/template.md; \
+		echo "✅ Change request template created"; \
+	else \
+		echo "ℹ️  Change request template already exists"; \
+	fi
+	@if [ ! -f docs/work/improvedocumentation/template.md ]; then \
+		cp pkg/nimsforestwork/templates/improvedocumentation.md docs/work/improvedocumentation/template.md; \
+		echo "✅ Documentation template created"; \
+	else \
+		echo "ℹ️  Documentation template already exists"; \
+	fi
+	@echo ""
+	@echo "📖 Creating README..."
+	@if [ ! -f docs/work/README.md ]; then \
+		cp pkg/nimsforestwork/README.md docs/work/README.md; \
+		echo "✅ README.md created"; \
+	else \
+		echo "ℹ️  README.md already exists"; \
+	fi
+	@echo ""
+	@echo "🎉 NimsforestWork initialization complete!"
+	@echo ""
+	@echo "📖 Work items now visible in docs visualizer!"
+	@echo ""
+	@echo "Usage:"
+	@echo "  1. Create work items in docs/work/{type}/new/"
+	@echo "  2. Move through workflow states as you progress"
+	@echo "  3. Every merge to main goes to production (Netflix model)"
+	@echo "  4. Browse work items through docs visualizer"
+	@echo ""
+	@echo "Next: make nimsforestwork-newissue"
+
+# Create a new work item interactively
+nimsforestwork-newissue:
+	@echo "🌲 Create New Work Item"
+	@echo "======================="
+	@echo ""
+	@if [ ! -d docs/work ]; then \
+		echo "❌ docs/work/ folder not found. Run 'make nimsforestwork-init' first"; \
+		exit 1; \
+	fi
+	@echo "Work item types:"
+	@echo "  1) changerequest     - Modify existing functionality"
+	@echo "  2) bug               - Report and fix bugs"
+	@echo "  3) proposal          - Propose new features"
+	@echo "  4) improvedocumentation - Improve documentation"
+	@echo ""
+	@read -p "Select type (1-4): " choice; \
+	case $$choice in \
+		1) TYPE="changerequests" ;; \
+		2) TYPE="bugs" ;; \
+		3) TYPE="proposals" ;; \
+		4) TYPE="improvedocumentation" ;; \
+		*) echo "❌ Invalid choice"; exit 1 ;; \
+	esac; \
+	echo ""; \
+	read -p "Enter title (will be formatted for filename): " title; \
+	if [ -z "$$title" ]; then \
+		echo "❌ Title cannot be empty"; \
+		exit 1; \
+	fi; \
+	filename=$$(echo "$$title" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]//g'); \
+	if [ -f "docs/work/$$TYPE/new/$$filename.md" ]; then \
+		echo "❌ File docs/work/$$TYPE/new/$$filename.md already exists"; \
+		exit 1; \
+	fi; \
+	echo ""; \
+	echo "Enter description (press Ctrl+D when done):"; \
+	description=$$(cat); \
+	echo ""; \
+	echo "Creating work item: docs/work/$$TYPE/new/$$filename.md"; \
+	cp "docs/work/$$TYPE/template.md" "docs/work/$$TYPE/new/$$filename.md"; \
+	if [ "$$TYPE" = "changerequests" ]; then \
+		sed -i "s/# Change Request Template/# $$title/" "docs/work/$$TYPE/new/$$filename.md"; \
+		sed -i "s/Brief description of the requested change/$$description/" "docs/work/$$TYPE/new/$$filename.md"; \
+	elif [ "$$TYPE" = "bugs" ]; then \
+		sed -i "s/# Bug Report Template/# $$title/" "docs/work/$$TYPE/new/$$filename.md"; \
+		sed -i "s/Brief description of the bug/$$description/" "docs/work/$$TYPE/new/$$filename.md"; \
+	elif [ "$$TYPE" = "proposals" ]; then \
+		sed -i "s/# Proposal Template/# $$title/" "docs/work/$$TYPE/new/$$filename.md"; \
+		sed -i "s/Brief, descriptive title/$$title/" "docs/work/$$TYPE/new/$$filename.md"; \
+	elif [ "$$TYPE" = "improvedocumentation" ]; then \
+		sed -i "s/# Documentation Improvement Template/# $$title/" "docs/work/$$TYPE/new/$$filename.md"; \
+		sed -i "s/What documentation needs improvement?/$$description/" "docs/work/$$TYPE/new/$$filename.md"; \
+	fi; \
+	echo "✅ Work item created successfully!"; \
+	echo ""; \
+	echo "📝 Edit the file to complete the details:"; \
+	echo "   docs/work/$$TYPE/new/$$filename.md"; \
+	echo ""; \
+	echo "📦 Commit when ready:"; \
+	echo "   git add docs/work/$$TYPE/new/$$filename.md"; \
+	echo "   git commit -m \"work: $$title\""; \
+	echo ""; \
+	echo "🎯 Next: Edit the file and commit to repository"
+
+# Validate all work items
+nimsforestwork-lint:
+	@echo "🌲 NimsforestWork Validation"
+	@echo "============================"
+	@echo ""
+	@echo "🔍 Checking work folder structure..."
+	@if [ ! -d docs/work ]; then \
+		echo "❌ docs/work/ folder not found. Run 'make nimsforestwork-init' first"; \
+		exit 1; \
+	fi
+	@echo "✅ Work folder structure valid"
+	@echo ""
+	@echo "📝 Validating work items..."
+	@find docs/work -name '*.md' ! -name 'template.md' ! -name 'README.md' -exec sh -c 'echo "Validating: $$1"; head -1 "$$1" | grep -q "^#" || (echo "❌ File $$1 should start with markdown title"; exit 1)' _ {} \; && echo "✅ All work items valid"
+	@echo ""
+	@echo "📊 Work item summary:"
+	@echo "   Proposals: $$(find docs/work/proposals -name '*.md' ! -name 'template.md' 2>/dev/null | wc -l || echo 0)"
+	@echo "   Bugs: $$(find docs/work/bugs -name '*.md' ! -name 'template.md' 2>/dev/null | wc -l || echo 0)"
+	@echo "   Change Requests: $$(find docs/work/changerequests -name '*.md' ! -name 'template.md' 2>/dev/null | wc -l || echo 0)"
+	@echo "   Documentation: $$(find docs/work/improvedocumentation -name '*.md' ! -name 'template.md' 2>/dev/null | wc -l || echo 0)"
+	@echo ""
+	@echo "📖 Browse work items in docs visualizer at docs/work/"
+	@echo ""
+	@echo "✅ NimsforestWork validation complete!"
+
+# Add this Makefile to the main project Makefile
+nimsforestwork-addtomainmakefile:
+	@echo "🌲 Adding NimsforestWork to main Makefile..."
+	@echo "============================================="
+	@echo ""
+	@if [ -z "$(PROJECTDIR)" ]; then \
+		echo "❌ PROJECTDIR environment variable not set"; \
+		echo "Usage: make nimsforestwork-addtomainmakefile PROJECTDIR=/path/to/project"; \
+		exit 1; \
+	fi
+	@if [ ! -f "$(PROJECTDIR)/Makefile" ]; then \
+		echo "❌ Makefile not found at $(PROJECTDIR)/Makefile"; \
+		exit 1; \
+	fi
+	@echo "📁 Project directory: $(PROJECTDIR)"
+	@echo "📝 Checking if already included..."
+	@if grep -q "pkg/nimsforestwork/MAKEFILE.nimsforestwork" "$(PROJECTDIR)/Makefile"; then \
+		echo "ℹ️  NimsforestWork already included in main Makefile"; \
+	else \
+		echo "" >> "$(PROJECTDIR)/Makefile"; \
+		echo "# Include NimsforestWork commands" >> "$(PROJECTDIR)/Makefile"; \
+		echo "-include pkg/nimsforestwork/MAKEFILE.nimsforestwork" >> "$(PROJECTDIR)/Makefile"; \
+		echo "✅ Added NimsforestWork include to main Makefile"; \
+	fi
+	@echo ""
+	@echo "🎉 NimsforestWork integration complete!"
+	@echo ""
+	@echo "Available commands:"
+	@echo "  make nimsforestwork-hello  - Check system compatibility"
+	@echo "  make nimsforestwork-init   - Initialize work structure"
+	@echo "  make nimsforestwork-lint   - Validate work items"
+
+# Remove this Makefile from the main project Makefile
+nimsforestwork-removefromainmakefile:
+	@echo "🌲 Removing NimsforestWork from main Makefile..."
+	@echo "==============================================="
+	@echo ""
+	@if [ -z "$(PROJECTDIR)" ]; then \
+		echo "❌ PROJECTDIR environment variable not set"; \
+		echo "Usage: make nimsforestwork-removefromainmakefile PROJECTDIR=/path/to/project"; \
+		exit 1; \
+	fi
+	@if [ ! -f "$(PROJECTDIR)/Makefile" ]; then \
+		echo "❌ Makefile not found at $(PROJECTDIR)/Makefile"; \
+		exit 1; \
+	fi
+	@echo "📁 Project directory: $(PROJECTDIR)"
+	@echo "🗑️  Removing NimsforestWork includes..."
+	@sed -i '/# Include NimsforestWork commands/d' "$(PROJECTDIR)/Makefile"
+	@sed -i '/-include pkg\/nimsforestwork\/MAKEFILE.nimsforestwork/d' "$(PROJECTDIR)/Makefile"
+	@echo "✅ Removed NimsforestWork from main Makefile"
+	@echo ""
+	@echo "🎉 NimsforestWork removal complete!"
