@@ -4,20 +4,24 @@ A self-contained work management system designed for developers and AI agents. P
 
 ## Quick Start for Project Integration
 
-### 1. Add to Any Project
+### 1. Add as Git Submodule (Required)
 
 ```bash
-# Option A: Add as git submodule (recommended)
-git submodule add https://github.com/nimsforest/nimsforest.git/pkg/nimsforestwork pkg/nimsforestwork
+# Add nimsforestwork as a submodule in tools/nimsforestwork
+git submodule add <repository-url> tools/nimsforestwork
 
-# Option B: Copy the package directly  
-cp -r /path/to/nimsforest/pkg/nimsforestwork pkg/
+# Navigate to the submodule directory
+cd tools/nimsforestwork
 
-# Initialize the system
-make -f pkg/nimsforestwork/MAKEFILE.nimsforestwork nimsforestwork-init
+# Run initial setup
+make nimsforestwork-hello
 
-# Add to main Makefile (optional but recommended)
-echo "-include pkg/nimsforestwork/MAKEFILE.nimsforestwork" >> Makefile
+# Add integration to main project Makefile
+make nimsforestwork-addtomainmake
+
+# Return to project root and initialize
+cd ../../
+make nimsforestwork-init
 ```
 
 ### 2. Available Commands
