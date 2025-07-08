@@ -8,7 +8,7 @@ The nimsforestwork system uses **git branch creation as a distributed locking me
 
 **Branch names are globally unique** within a git repository. When multiple agents attempt to create the same branch name, only the first to successfully push to the remote repository claims the work. This creates a **distributed lock** that prevents concurrent work conflicts.
 
-## Why Branch-Based Locking?
+## Why Branch-Based Locking with Git Worktrees?
 
 ### Traditional Approaches Don't Scale
 
@@ -24,7 +24,13 @@ The nimsforestwork system uses **git branch creation as a distributed locking me
 - ❌ **Complex infrastructure** requirements
 - ❌ **Scaling bottlenecks** with high concurrency
 
-### Branch-Based Locking Advantages
+**Single workspace approaches**:
+- ❌ **Branch switching conflicts** when multiple agents on same machine
+- ❌ **Working directory pollution** from concurrent operations
+- ❌ **File locking issues** in shared workspace
+- ❌ **Cannot scale** multiple agents per machine
+
+### Branch-Based Locking with Worktrees Advantages
 
 - ✅ **Atomic operations**: Git push either succeeds or fails cleanly
 - ✅ **Zero infrastructure**: Uses existing git remote
@@ -32,6 +38,9 @@ The nimsforestwork system uses **git branch creation as a distributed locking me
 - ✅ **Self-healing**: Stale branches are detectable and recoverable
 - ✅ **Perfect scaling**: Git handles thousands of concurrent pushes
 - ✅ **Distributed by design**: No central coordinator needed
+- ✅ **Same-machine concurrency**: Multiple agents per machine via worktrees
+- ✅ **Isolated workspaces**: Each agent has dedicated filesystem space
+- ✅ **No working directory conflicts**: Agents never interfere locally
 
 ## Locking Mechanism
 
@@ -45,72 +54,110 @@ The nimsforestwork system uses **git branch creation as a distributed locking me
 - `readyforanalysis-userauth-b5c6d7e8` - Agent analyzing requirements
 - `indevelopment-userauth-b5c6d7e8` - Agent doing development work
 
-### Claiming Process
+### Claiming Process with Git Worktrees
+
+**Critical**: Use git worktrees to enable **concurrent agents on same machine** without conflicts.
 
 ```bash
-# Step 1: Create local branch with specific name
-git checkout -b readyforanalysis-userauth-b5c6d7e8
+# Step 1: Create isolated worktree + branch in one operation
+WORK_ITEM="userauth-b5c6d7e8"
+BRANCH_NAME="readyforanalysis-${WORK_ITEM}"
+WORKTREE_PATH="../${BRANCH_NAME}"
+
+# Create worktree with new branch
+git worktree add ${WORKTREE_PATH} -b ${BRANCH_NAME}
+cd ${WORKTREE_PATH}
 
 # Step 2: IMMEDIATELY push to claim on remote (THE LOCK)
-git push -u origin readyforanalysis-userauth-b5c6d7e8
+git push -u origin ${BRANCH_NAME}
 # ✅ SUCCESS = You claimed the work
 # ❌ FAILURE = Someone else claimed it first (branch already exists)
 
 # Step 3: Only if push succeeded, proceed with work
 if [ $? -eq 0 ]; then
     # Move work item folder to next state  
-    git mv docs/work/newfeatures/readyforanalysis/userauth-b5c6d7e8/ \
-           docs/work/newfeatures/inanalysis/userauth-b5c6d7e8/
-    git commit -m "work: start analysis - userauth-b5c6d7e8"
+    git mv docs/work/newfeatures/readyforanalysis/${WORK_ITEM}/ \
+           docs/work/newfeatures/inanalysis/${WORK_ITEM}/
+    git commit -m "work: start analysis - ${WORK_ITEM}"
     git push
     
-    # DO THE ACTUAL WORK HERE
+    # DO THE ACTUAL WORK HERE (in isolated worktree)
+    # - Add analysis.md
+    # - Update requirements
+    # - Create design documents
     
     # When complete, prepare for next state
-    git mv docs/work/newfeatures/inanalysis/userauth-b5c6d7e8/ \
-           docs/work/newfeatures/readyfordevelopment/userauth-b5c6d7e8/
-    git commit -m "work: ready for development - userauth-b5c6d7e8"
+    git mv docs/work/newfeatures/inanalysis/${WORK_ITEM}/ \
+           docs/work/newfeatures/readyfordevelopment/${WORK_ITEM}/
+    git commit -m "work: ready for development - ${WORK_ITEM}"
     git push
     
-    # Clean up - delete the claiming branch
-    git checkout main
-    git branch -d readyforanalysis-userauth-b5c6d7e8
-    git push origin --delete readyforanalysis-userauth-b5c6d7e8
+    # Clean up - merge to main and remove worktree
+    cd ../main  # Back to main worktree
+    git pull origin main  # Get latest changes
+    git merge --no-ff ${BRANCH_NAME}  # Merge work
+    git push origin main
+    
+    # Clean up branch and worktree
+    git push origin --delete ${BRANCH_NAME}
+    git worktree remove ${WORKTREE_PATH}
+    git branch -d ${BRANCH_NAME}
 else
-    # Failed to claim - clean up and try next work item
-    git checkout main
-    git branch -d readyforanalysis-userauth-b5c6d7e8
+    # Failed to claim - clean up worktree and try next work item
+    cd ../main
+    git worktree remove ${WORKTREE_PATH}
+    git branch -d ${BRANCH_NAME}
     echo "Work already claimed by another agent, trying next item..."
 fi
 ```
 
 ## Race Condition Handling
 
-### Concurrent Claiming Scenario
+### Concurrent Claiming Scenario with Worktrees
 
 ```bash
-# Agent A and Agent B both see: userauth-b5c6d7e8/ folder in readyforanalysis/
-# Both create local branch: readyforanalysis-userauth-b5c6d7e8
+# Agent A and Agent B (same machine or different) both see: userauth-b5c6d7e8/ folder
 
-# Agent A pushes first:
+# Agent A creates worktree:
+git worktree add ../readyforanalysis-userauth-b5c6d7e8 -b readyforanalysis-userauth-b5c6d7e8
+cd ../readyforanalysis-userauth-b5c6d7e8
 git push -u origin readyforanalysis-userauth-b5c6d7e8
-# ✅ SUCCESS - Agent A owns the work
+# ✅ SUCCESS - Agent A owns the work, has isolated workspace
 
-# Agent B pushes second:
+# Agent B creates worktree (even on same machine):
+git worktree add ../readyforanalysis-userauth-b5c6d7e8 -b readyforanalysis-userauth-b5c6d7e8
+# ❌ FAILURE - Branch already exists locally (if same machine)
+# OR creates worktree, then:
+cd ../readyforanalysis-userauth-b5c6d7e8
 git push -u origin readyforanalysis-userauth-b5c6d7e8  
 # ❌ FAILURE - "remote ref already exists"
-# Agent B immediately tries next available work item
+# Agent B cleans up worktree and tries next work item
 ```
 
 ### Failure Recovery
 
-**Immediate Recovery**:
+**Immediate Recovery with Worktrees**:
 ```bash
-# When claim fails, immediately clean up and move on
-if ! git push -u origin readyforanalysis-userauth-b5c6d7e8; then
-    git checkout main
-    git branch -d readyforanalysis-userauth-b5c6d7e8
-    # Try claiming next available work item (look for folders)
+# When claim fails, immediately clean up worktree and move on
+BRANCH_NAME="readyforanalysis-userauth-b5c6d7e8"
+WORKTREE_PATH="../${BRANCH_NAME}"
+
+# Create worktree and attempt claim
+git worktree add ${WORKTREE_PATH} -b ${BRANCH_NAME} 2>/dev/null
+if [ $? -eq 0 ]; then
+    cd ${WORKTREE_PATH}
+    if ! git push -u origin ${BRANCH_NAME}; then
+        # Failed to claim - clean up worktree
+        cd ../main
+        git worktree remove ${WORKTREE_PATH}
+        git branch -d ${BRANCH_NAME}
+        echo "Work already claimed, trying next item..."
+        # Try claiming next available work item (look for folders)
+        find docs/work/*/readyfor* -maxdepth 1 -type d | head -1
+    fi
+else
+    echo "Branch already exists locally, trying next item..."
+    # Try claiming next available work item
     find docs/work/*/readyfor* -maxdepth 1 -type d | head -1
 fi
 ```
@@ -130,6 +177,14 @@ for branch in $(git branch -r | grep 'origin/readyfor\|origin/indevelopment'); d
         echo "Stale branch detected: $branch"
     fi
 done
+
+# Check for stale worktrees (local cleanup)
+git worktree list | grep -E '(readyfor|indevelopment|stamp|triaging)' | while read path branch; do
+    if [ ! -d "$path" ]; then
+        echo "Stale worktree reference: $path -> $branch"
+        git worktree prune
+    fi
+done
 ```
 
 ### Recovery Mechanisms
@@ -144,8 +199,21 @@ AGE=$((CURRENT_TIME - CREATED_TIME))
 
 if [ $AGE -gt 86400 ]; then  # 24 hours
     echo "Branch $STALE_BRANCH is stale, cleaning up"
+    
+    # Clean up remote branch
     git push origin --delete $STALE_BRANCH
+    
+    # Clean up any local worktrees pointing to this branch
+    WORKTREE_PATH="../${STALE_BRANCH}"
+    if [ -d "$WORKTREE_PATH" ]; then
+        git worktree remove "$WORKTREE_PATH" --force
+    fi
+    
+    # Clean up local branch if it exists
+    git branch -D $STALE_BRANCH 2>/dev/null
+    
     # Work item automatically becomes available for new claims
+    echo "Work item released back to queue"
 fi
 ```
 
@@ -163,23 +231,26 @@ fi
 | `readyfortesting/` | `intesting-{item}` | `signedoff/` | Testing |
 | `signedoff/` | `production-{item}` | `archive/production/` | Deploy |
 
-### Branch Lifecycle
+### Branch Lifecycle with Worktrees
 
-1. **Create**: `git checkout -b {state}-{item}`
+1. **Create**: `git worktree add ../{state}-{item} -b {state}-{item}`
 2. **Claim**: `git push -u origin {state}-{item}` (THE LOCK)
-3. **Work**: Move files, do actual work, commit progress
-4. **Complete**: Move to next state, commit completion
-5. **Cleanup**: Delete branch when state transition complete
+3. **Work**: Move files, do actual work, commit progress (in isolated worktree)
+4. **Complete**: Move to next state, merge to main, commit completion
+5. **Cleanup**: Delete branch and remove worktree when state transition complete
 
 ## Scalability Analysis
 
 ### Performance Characteristics
 
-**Git's distributed design** handles enterprise-scale concurrent operations:
+**Git's distributed design with worktrees** handles enterprise-scale concurrent operations:
 - **Thousands of simultaneous pushes**: Git servers handle this routinely
 - **Instant conflict detection**: Branch existence check is O(1)
 - **No network chattering**: Single push operation determines success
 - **Automatic load balancing**: Failed agents immediately try other work
+- **Same-machine scaling**: Multiple agents per machine via isolated worktrees
+- **Filesystem isolation**: No file conflicts between concurrent agents
+- **Resource efficiency**: Worktrees share .git objects, minimal disk overhead
 
 ### Real-World Scale Examples
 
