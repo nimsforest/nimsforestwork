@@ -44,19 +44,28 @@ nimsforestwork-init:
 	@echo "=================================================="
 	@echo ""
 	@echo "📁 Creating work management folders in docs/work/..."
-	@mkdir -p docs/work/proposals/new docs/work/proposals/planned docs/work/proposals/active docs/work/proposals/ready docs/work/proposals/archive
-	@mkdir -p docs/work/bugs/new docs/work/bugs/planned docs/work/bugs/active docs/work/bugs/pendingfeedback docs/work/bugs/ready docs/work/bugs/archive
-	@mkdir -p docs/work/changerequests/new docs/work/changerequests/planned docs/work/changerequests/active docs/work/changerequests/pendingfeedback docs/work/changerequests/ready docs/work/changerequests/archive
-	@mkdir -p docs/work/improvedocumentation/new docs/work/improvedocumentation/planned docs/work/improvedocumentation/active docs/work/improvedocumentation/ready docs/work/improvedocumentation/archive
+	@mkdir -p docs/work/issues/new docs/work/issues/triaging docs/work/issues/pending
+	@mkdir -p docs/work/bugs/next docs/work/bugs/readyforanalysis docs/work/bugs/inanalysis docs/work/bugs/readyfordevelopment docs/work/bugs/indevelopment docs/work/bugs/readyfortesting docs/work/bugs/intesting docs/work/bugs/signedoff docs/work/bugs/pendingfeedback
+	@mkdir -p docs/work/changerequests/next docs/work/changerequests/readyforanalysis docs/work/changerequests/inanalysis docs/work/changerequests/readyfordevelopment docs/work/changerequests/indevelopment docs/work/changerequests/readyfortesting docs/work/changerequests/intesting docs/work/changerequests/signedoff docs/work/changerequests/pendingfeedback
+	@mkdir -p docs/work/newfeatures/next docs/work/newfeatures/readyforanalysis docs/work/newfeatures/inanalysis docs/work/newfeatures/readyfordevelopment docs/work/newfeatures/indevelopment docs/work/newfeatures/readyfortesting docs/work/newfeatures/intesting docs/work/newfeatures/signedoff
+	@mkdir -p docs/work/improvedocumentation/next docs/work/improvedocumentation/readyforanalysis docs/work/improvedocumentation/inanalysis docs/work/improvedocumentation/readyfordevelopment docs/work/improvedocumentation/indevelopment docs/work/improvedocumentation/readyfortesting docs/work/improvedocumentation/intesting docs/work/improvedocumentation/signedoff
+	@mkdir -p docs/work/archive/production docs/work/archive/rejected
 	@echo "✅ Work folders created"
 	@echo ""
 	@echo "📝 Creating templates..."
 	@NIMSFORESTWORK_DIR=$$(find . -name "MAKEFILE.nimsforestwork" -exec dirname {} \; | head -1); \
-	if [ ! -f docs/work/proposals/template.md ]; then \
-		cp $$NIMSFORESTWORK_DIR/templates/proposal.md docs/work/proposals/template.md; \
-		echo "✅ Proposal template created"; \
+	if [ ! -f docs/work/issues/template.md ]; then \
+		cp $$NIMSFORESTWORK_DIR/templates/issue.md docs/work/issues/template.md; \
+		echo "✅ Issue template created"; \
 	else \
-		echo "ℹ️  Proposal template already exists"; \
+		echo "ℹ️  Issue template already exists"; \
+	fi
+	@NIMSFORESTWORK_DIR=$$(find . -name "MAKEFILE.nimsforestwork" -exec dirname {} \; | head -1); \
+	if [ ! -f docs/work/newfeatures/template.md ]; then \
+		cp $$NIMSFORESTWORK_DIR/templates/newfeature.md docs/work/newfeatures/template.md; \
+		echo "✅ New feature template created"; \
+	else \
+		echo "ℹ️  New feature template already exists"; \
 	fi
 	@NIMSFORESTWORK_DIR=$$(find . -name "MAKEFILE.nimsforestwork" -exec dirname {} \; | head -1); \
 	if [ ! -f docs/work/bugs/template.md ]; then \
@@ -101,69 +110,42 @@ nimsforestwork-init:
 	@echo ""
 	@echo "Next: make nimsforestwork-newissue"
 
-# Create a new work item interactively
+# Create a new work item with parameters
+# Usage: make nimsforestwork-newissue TITLE=mytitle MESSAGE="my description"
 nimsforestwork-newissue:
-	@echo "🌲 Create New Work Item"
-	@echo "======================="
+	@echo "🌲 Create New Issue"
+	@echo "==================="
 	@echo ""
 	@if [ ! -d docs/work ]; then \
 		echo "❌ docs/work/ folder not found. Run 'make nimsforestwork-init' first"; \
 		exit 1; \
 	fi
-	@echo "Work item types:"
-	@echo "  1) changerequest     - Modify existing functionality"
-	@echo "  2) bug               - Report and fix bugs"
-	@echo "  3) proposal          - Propose new features"
-	@echo "  4) improvedocumentation - Improve documentation"
-	@echo ""
-	@read -p "Select type (1-4): " choice; \
-	case $$choice in \
-		1) TYPE="changerequests" ;; \
-		2) TYPE="bugs" ;; \
-		3) TYPE="proposals" ;; \
-		4) TYPE="improvedocumentation" ;; \
-		*) echo "❌ Invalid choice"; exit 1 ;; \
-	esac; \
-	echo ""; \
-	read -p "Enter title (will be formatted for filename): " title; \
-	if [ -z "$$title" ]; then \
-		echo "❌ Title cannot be empty"; \
+	@if [ -z "$(TITLE)" ]; then \
+		echo "❌ TITLE parameter required"; \
+		echo "Usage: make nimsforestwork-newissue TITLE=mytitle MESSAGE='my description'"; \
 		exit 1; \
-	fi; \
+	fi
+	@if [ -z "$(MESSAGE)" ]; then \
+		echo "❌ MESSAGE parameter required"; \
+		echo "Usage: make nimsforestwork-newissue TITLE=mytitle MESSAGE='my description'"; \
+		exit 1; \
+	fi
+	@TYPE="issues"; \
+	title="$(TITLE)"; \
+	message="$(MESSAGE)"; \
 	filename=$$(echo "$$title" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]//g'); \
 	if [ -f "docs/work/$$TYPE/new/$$filename.md" ]; then \
 		echo "❌ File docs/work/$$TYPE/new/$$filename.md already exists"; \
 		exit 1; \
 	fi; \
-	echo ""; \
-	echo "Enter description (press Ctrl+D when done):"; \
-	description=$$(cat); \
-	echo ""; \
-	echo "Creating work item: docs/work/$$TYPE/new/$$filename.md"; \
+	echo "Creating issue: docs/work/$$TYPE/new/$$filename.md"; \
 	cp "docs/work/$$TYPE/template.md" "docs/work/$$TYPE/new/$$filename.md"; \
-	if [ "$$TYPE" = "changerequests" ]; then \
-		sed -i "s/# Change Request Template/# $$title/" "docs/work/$$TYPE/new/$$filename.md"; \
-		sed -i "s/Brief description of the requested change/$$description/" "docs/work/$$TYPE/new/$$filename.md"; \
-	elif [ "$$TYPE" = "bugs" ]; then \
-		sed -i "s/# Bug Report Template/# $$title/" "docs/work/$$TYPE/new/$$filename.md"; \
-		sed -i "s/Brief description of the bug/$$description/" "docs/work/$$TYPE/new/$$filename.md"; \
-	elif [ "$$TYPE" = "proposals" ]; then \
-		sed -i "s/# Proposal Template/# $$title/" "docs/work/$$TYPE/new/$$filename.md"; \
-		sed -i "s/Brief, descriptive title/$$title/" "docs/work/$$TYPE/new/$$filename.md"; \
-	elif [ "$$TYPE" = "improvedocumentation" ]; then \
-		sed -i "s/# Documentation Improvement Template/# $$title/" "docs/work/$$TYPE/new/$$filename.md"; \
-		sed -i "s/What documentation needs improvement?/$$description/" "docs/work/$$TYPE/new/$$filename.md"; \
-	fi; \
-	echo "✅ Work item created successfully!"; \
+	sed -i "s/# Issue Template/# $$title/" "docs/work/$$TYPE/new/$$filename.md"; \
+	sed -i "s/Brief description of the issue or request/$$message/" "docs/work/$$TYPE/new/$$filename.md"; \
+	echo "✅ Issue created successfully!"; \
 	echo ""; \
-	echo "📝 Edit the file to complete the details:"; \
-	echo "   docs/work/$$TYPE/new/$$filename.md"; \
-	echo ""; \
-	echo "📦 Commit when ready:"; \
-	echo "   git add docs/work/$$TYPE/new/$$filename.md"; \
-	echo "   git commit -m \"work: $$title\""; \
-	echo ""; \
-	echo "🎯 Next: Edit the file and commit to repository"
+	echo "📝 File created at: docs/work/$$TYPE/new/$$filename.md"; \
+	echo "🎯 Next: Edit the file to complete details, then commit to repository"
 
 # Validate all work items
 nimsforestwork-lint:
@@ -181,10 +163,12 @@ nimsforestwork-lint:
 	@find docs/work -name '*.md' ! -name 'template.md' ! -name 'README.md' -exec sh -c 'echo "Validating: $$1"; head -1 "$$1" | grep -q "^#" || (echo "❌ File $$1 should start with markdown title"; exit 1)' _ {} \; && echo "✅ All work items valid"
 	@echo ""
 	@echo "📊 Work item summary:"
-	@echo "   Proposals: $$(find docs/work/proposals -name '*.md' ! -name 'template.md' 2>/dev/null | wc -l || echo 0)"
+	@echo "   Issues: $$(find docs/work/issues -name '*.md' ! -name 'template.md' 2>/dev/null | wc -l || echo 0)"
+	@echo "   New Features: $$(find docs/work/newfeatures -name '*.md' ! -name 'template.md' 2>/dev/null | wc -l || echo 0)"
 	@echo "   Bugs: $$(find docs/work/bugs -name '*.md' ! -name 'template.md' 2>/dev/null | wc -l || echo 0)"
 	@echo "   Change Requests: $$(find docs/work/changerequests -name '*.md' ! -name 'template.md' 2>/dev/null | wc -l || echo 0)"
 	@echo "   Documentation: $$(find docs/work/improvedocumentation -name '*.md' ! -name 'template.md' 2>/dev/null | wc -l || echo 0)"
+	@echo "   Archived: $$(find docs/work/archive -name '*.md' 2>/dev/null | wc -l || echo 0)"
 	@echo ""
 	@echo "📖 Browse work items in docs visualizer at docs/work/"
 	@echo ""
