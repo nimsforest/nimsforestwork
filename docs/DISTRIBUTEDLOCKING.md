@@ -2,7 +2,7 @@
 
 ## Overview
 
-The nimsforestwork system uses **git branch creation as a distributed locking mechanism** to coordinate work among thousands of concurrent developers without requiring central coordination. This document explains the principles, implementation, and benefits of this approach.
+The nimsforestwork system uses **git branch creation as a distributed locking mechanism** to coordinate work among thousands of concurrent developers without requiring central coordination. For high-level workflow context, see [WORKFLOW.md](WORKFLOW.md). For triage-specific locking, see [TRIAGE.md](TRIAGE.md). This document explains the principles, implementation, and benefits of this approach.
 
 ## Core Principle
 

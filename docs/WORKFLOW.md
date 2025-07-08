@@ -3,8 +3,8 @@
 A practical but thorough guide on how to manage a software product and development team using **distributed git-based coordination**. The focus is to be as agile as possible while ensuring quality through **branch-based distributed locking** and **folder-based state tracking**.
 
 This document provides a high-level overview of the complete workflow. For detailed implementation, see:
-- **TRIAGE.md** - Triage process and stamping workflow
-- **DISTRIBUTEDLOCKING.md** - Branch-based distributed locking mechanism
+- **[TRIAGE.md](TRIAGE.md)** - Triage process and stamping workflow
+- **[DISTRIBUTEDLOCKING.md](DISTRIBUTEDLOCKING.md)** - Branch-based distributed locking mechanism
 
 This document covers all aspects from input (new things to make) to production (how to make quality items while staying nimble) to output (releasing new quality versions).
 
@@ -53,7 +53,7 @@ docs/work/
 
 ## Input Phase: New Things to Make
 
-All work items enter through the **triage process** documented in **TRIAGE.md**. This ensures unique identification and proper categorization through distributed coordination.
+All work items enter through the **triage process** documented in **[TRIAGE.md](TRIAGE.md)**. This ensures unique identification and proper categorization through distributed coordination.
 
 ### Two-Stage Triage Process
 
@@ -62,7 +62,7 @@ All work items enter through the **triage process** documented in **TRIAGE.md**.
 
 **User Feedback Loop**: If more information is needed, items move to `pending-{item-uuid}/` state. Users provide additional information and manually move items back to `stamped/` for re-triage.
 
-See **TRIAGE.md** for complete implementation details.
+See **[TRIAGE.md](TRIAGE.md)** for complete implementation details.
 
 ### Work Item Creation Methods
 
@@ -92,7 +92,7 @@ The production phase uses **branch-based distributed locking** with **git worktr
 - **Branch-based claiming** prevents work conflicts
 - **Folder-based state tracking** through filesystem
 
-See **DISTRIBUTEDLOCKING.md** for complete implementation details.
+See **[DISTRIBUTEDLOCKING.md](DISTRIBUTEDLOCKING.md)** for complete implementation details.
 
 ### Product Backlog Lifecycle
 
@@ -157,19 +157,19 @@ All artifacts remain in the work item folder as it moves through states.
 
 ### Branch-Based Distributed Locking
 
-**Critical**: All state transitions use **git worktrees** and **branch-based claiming** to prevent concurrent work conflicts.
+**Critical**: All state transitions use **git worktrees** and **branch-based claiming** to prevent concurrent work conflicts (detailed in **[DISTRIBUTEDLOCKING.md](DISTRIBUTEDLOCKING.md)**).
 
 The system **replaces traditional push-to-claim** with **branch-based claiming** for superior distributed coordination.
 
 ### Standard Flow
 
-1. **Triage**: `new/` → `stamped/` → `{category}/next/` (detailed in **TRIAGE.md**)
+1. **Triage**: `new/` → `stamped/` → `{category}/next/` (detailed in **[TRIAGE.md](TRIAGE.md)**)
 2. **Development**: `next/` → `readyforanalysis/` → `inanalysis/` → `readyfordevelopment/` → `indevelopment/` → `readyfortesting/` → `intesting/` → `signedoff/`
 3. **Completion**: `archive/production/` or `archive/rejected/`
 
 ### Claiming Mechanism
 
-**Git worktree + branch claiming** (detailed in **DISTRIBUTEDLOCKING.md**):
+**Git worktree + branch claiming** (detailed in **[DISTRIBUTEDLOCKING.md](DISTRIBUTEDLOCKING.md)**):
 
 ```bash
 # Standard claiming pattern
@@ -240,8 +240,8 @@ Quality gates are enforced through work item folder content - missing required a
 ### Complete Documentation
 
 For implementation details, see:
-- **TRIAGE.md**: Complete triage process and stamping workflow
-- **DISTRIBUTEDLOCKING.md**: Branch-based distributed locking mechanism
-- **NIMINSTRUCTIONS.md**: Agent-specific implementation instructions
+- **[TRIAGE.md](TRIAGE.md)**: Complete triage process and stamping workflow
+- **[DISTRIBUTEDLOCKING.md](DISTRIBUTEDLOCKING.md)**: Branch-based distributed locking mechanism
+- **[NIMINSTRUCTIONS.md](NIMINSTRUCTIONS.md)**: Agent-specific implementation instructions
 
 This workflow ensures systematic handling of all work types while maintaining quality and agility at enterprise scale through pure git-based distributed coordination.

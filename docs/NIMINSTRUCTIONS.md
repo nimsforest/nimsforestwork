@@ -14,7 +14,7 @@ You are a Nim working in a project that uses the nimsforestwork system for task 
 
 ### 1. Triage Work (Must Complete First)
 
-**See TRIAGE.md for complete implementation details.**
+**See [TRIAGE.md](TRIAGE.md) for complete implementation details.**
 
 1. **Check system compatibility**: `make nimsforestwork-hello`
 2. **Process triage queue**: `make nimsforestwork-stamp-work` 
@@ -23,7 +23,7 @@ You are a Nim working in a project that uses the nimsforestwork system for task 
 
 ### 2. Development Work  
 
-**See DISTRIBUTEDLOCKING.md for complete implementation details.**
+**See [DISTRIBUTEDLOCKING.md](DISTRIBUTEDLOCKING.md) for complete implementation details.**
 
 1. **Ensure all triage work is done**: Both `issues/new/` and `issues/stamped/` must be empty
 2. **Find and claim work**: `make nimsforestwork-claim-work` with branch-based locking
@@ -32,7 +32,7 @@ You are a Nim working in a project that uses the nimsforestwork system for task 
 
 ### 3. Issue Intake Process
 
-**See TRIAGE.md for complete triage workflow.**
+**See [TRIAGE.md](TRIAGE.md) for complete triage workflow.**
 
 Items flow: `new/` → `stamped/` → (`pending-{item}/` ↔ user feedback) → `{category}/next/` → ... → (`pending-{item}/` ↔ user feedback) using branch-based claiming.
 
@@ -45,7 +45,7 @@ Items flow: `new/` → `stamped/` → (`pending-{item}/` ↔ user feedback) → 
 
 ### 5. Workflow States
 
-**See DISTRIBUTEDLOCKING.md for complete state workflow.**
+**See [DISTRIBUTEDLOCKING.md](DISTRIBUTEDLOCKING.md) for complete state workflow.**
 
 Each category follows: `next/` → `readyforanalysis/` → `inanalysis/` → `readyfordevelopment/` → `indevelopment/` → `readyfortesting/` → `intesting/` → `signedoff/` with `pending-{item-uuid}/` available at any state.
 
@@ -56,7 +56,7 @@ Each category follows: `next/` → `readyforanalysis/` → `inanalysis/` → `re
 
 ### 7. State Transitions
 
-**See DISTRIBUTEDLOCKING.md for complete branch-based claiming workflow.**
+**See [DISTRIBUTEDLOCKING.md](DISTRIBUTEDLOCKING.md) for complete branch-based claiming workflow.**
 
 Uses **git worktrees + branch-based claiming** with pattern: `{target-state}-{work-item-uuid}`
 
@@ -90,7 +90,7 @@ Uses **git worktrees + branch-based claiming** with pattern: `{target-state}-{wo
 
 ### For Any Development Task:
 
-**See TRIAGE.md and DISTRIBUTEDLOCKING.md for complete workflow details.**
+**See [TRIAGE.md](TRIAGE.md) and [DISTRIBUTEDLOCKING.md](DISTRIBUTEDLOCKING.md) for complete workflow details.**
 
 1. **Start**: `make nimsforestwork-hello`
 2. **Complete triage**: `make nimsforestwork-stamp-work` until `issues/new/` is empty
@@ -142,8 +142,8 @@ Always run `make nimsforestwork-lint` to ensure:
 ## Quick Reference
 
 **Essential reading for implementation**:
-- **TRIAGE.md** - Complete triage process and UUID stamping
-- **DISTRIBUTEDLOCKING.md** - Branch-based distributed locking with worktrees
-- **WORKFLOW.md** - High-level overview and system architecture
+- **[TRIAGE.md](TRIAGE.md)** - Complete triage process and UUID stamping
+- **[DISTRIBUTEDLOCKING.md](DISTRIBUTEDLOCKING.md)** - Branch-based distributed locking with worktrees
+- **[WORKFLOW.md](WORKFLOW.md)** - High-level overview and system architecture
 
 **Start every session with**: `make nimsforestwork-hello`

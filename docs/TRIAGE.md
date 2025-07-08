@@ -2,7 +2,7 @@
 
 ## Overview
 
-The triage process is the **entry point** for all work items in the nimsforestwork system. It consists of two critical stages that prevent race conditions and ensure unique identification of work items.
+The triage process is the **entry point** for all work items in the nimsforestwork system. For high-level workflow context, see [WORKFLOW.md](WORKFLOW.md). It consists of two critical stages that prevent race conditions and ensure unique identification of work items.
 
 ## Two-Stage Triage Process
 
@@ -284,6 +284,6 @@ Once categorized, work items become **folders** that can contain:
 
 ## Integration with Development Workflow
 
-Once categorized, work items follow the standard branch-based development workflow documented in DISTRIBUTEDLOCKING.md. The unique UUID and folder structure ensures no collisions throughout the entire development lifecycle.
+Once categorized, work items follow the standard branch-based development workflow documented in [DISTRIBUTEDLOCKING.md](DISTRIBUTEDLOCKING.md). The unique UUID and folder structure ensures no collisions throughout the entire development lifecycle.
 
 All subsequent state transitions move the **entire folder**, preserving all accumulated work artifacts as the item progresses through the development pipeline.

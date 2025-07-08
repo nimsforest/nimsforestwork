@@ -91,15 +91,16 @@ nimsforestwork-help:
 	@echo "  {state}-{item}         - Claiming state transition work"
 	@echo ""
 	@echo "🤖 For AI Agent Nims:"
-	@echo "Tell your AI agent: 'Read NIMINSTRUCTIONS.md and follow those instructions'"
+	@echo "Tell your AI agent: 'Read docs/NIMINSTRUCTIONS.md and follow those instructions'"
 	@echo ""
 	@echo "👨‍💻 For Human Nims:"
-	@echo "Read NIMINSTRUCTIONS.md for complete workflow guidance"
+	@echo "Read docs/NIMINSTRUCTIONS.md for complete workflow guidance"
 	@echo ""
 	@echo "📖 Documentation:"
 	@echo "  docs/WORKFLOW.md         - High-level workflow overview"
 	@echo "  docs/TRIAGE.md          - Triage process and stamping workflow"
 	@echo "  docs/DISTRIBUTEDLOCKING.md - Branch-based distributed locking"
+	@echo "  docs/NIMINSTRUCTIONS.md  - Agent-specific implementation instructions"
 
 # Check system compatibility for work management
 nimsforestwork-hello:
