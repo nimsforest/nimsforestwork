@@ -2,22 +2,97 @@
 
 A self-contained work management system designed for developers and AI agents. Provides deterministic work item lifecycle management with Netflix-style deployment philosophy.
 
-## Quick Start for Project Integration
+## 🚀 Quick Setup: Transform Any Repo into a Git Worktree Workspace
 
-### 1. Add as Git Submodule (Required)
+### Step-by-Step Example with "justanothertodoapp"
+
+Let's say you have a project called `justanothertodoapp`:
+
+```bash
+# 1. You're currently in your project directory
+cd /home/user/justanothertodoapp
+pwd
+# Output: /home/user/justanothertodoapp
+
+# 2. Add nimsforestwork to your project
+git clone https://github.com/nimsforest/nimsforestwork.git tools/nimsforestwork
+
+# 3. Set up the workspace (this moves your repo!)
+WORKSPACE_ROOT=/home/user/justanothertodoapp-workspace make -f tools/nimsforestwork/MAKEFILE.nimsforestwork nimsforestwork-setup-workspace
+
+# 4. Your project is now organized as a workspace
+cd /home/user/justanothertodoapp-workspace
+```
+
+### What Just Happened?
+
+**Before:**
+```
+/home/user/justanothertodoapp/     # Your repo
+├── src/
+├── README.md
+└── .git/
+```
+
+**After:**
+```
+/home/user/justanothertodoapp-workspace/     # New workspace
+├── main/                                    # Your repo moved here
+│   ├── src/
+│   ├── README.md
+│   └── .git/
+├── tools/nimsforestwork/                    # Work management
+├── work/                                    # Work items
+├── AGENTINSTRUCTIONS.md                     # AI agent setup
+└── Makefile                                 # Workspace commands
+```
+
+### 🌳 Ready for Git Worktrees
+
+```bash
+# Create feature branches as separate directories
+cd /home/user/justanothertodoapp-workspace/main
+git worktree add ../feature-auth origin/feature-auth
+git worktree add ../bug-fix-login origin/bug-fix-login
+
+# Your workspace now looks like:
+# justanothertodoapp-workspace/
+# ├── main/              # main branch
+# ├── feature-auth/      # feature branch
+# ├── bug-fix-login/     # bug fix branch
+# ├── work/              # shared work management
+# └── tools/             # shared tools
+```
+
+## 📝 WORKSPACE_ROOT Explained
+
+**WORKSPACE_ROOT** = Where you want the new workspace folder created
+
+### Examples:
+
+| Your Project | WORKSPACE_ROOT | Result |
+|--------------|----------------|--------|
+| `/home/user/myapp` | `/home/user/myapp-workspace` | Workspace at `/home/user/myapp-workspace/` |
+| `/code/backend-api` | `/code/backend-api-workspace` | Workspace at `/code/backend-api-workspace/` |
+| `C:\dev\frontend` | `C:\dev\frontend-workspace` | Workspace at `C:\dev\frontend-workspace\` |
+
+### Convention:
+- **Project**: `{name}`
+- **Workspace**: `{name}-workspace` (recommended)
+
+## Alternative Setup Methods
+
+### 1. Traditional Project Integration (No Workspace)
 
 ```bash
 # Add nimsforestwork as a submodule in tools/nimsforestwork
-git submodule add <repository-url> tools/nimsforestwork
+git submodule add https://github.com/nimsforest/nimsforestwork.git tools/nimsforestwork
 
 # Navigate to the submodule directory
 cd tools/nimsforestwork
 
 # Run initial setup
 make nimsforestwork-hello
-
-# Add integration to main project Makefile
-make nimsforestwork-addtomainmake
 
 # Return to project root and initialize
 cd ../../
