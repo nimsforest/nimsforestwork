@@ -12,13 +12,25 @@ You are a Nim working in a project that uses the nimsforestwork system for task 
 
 ## Core Workflow
 
-### 1. Before ANY Development Work
+### 1. Triage Work (Must Complete First)
 
 1. **Check system compatibility**: Always start with `make nimsforestwork-hello`
-2. **Check existing work**: Look in `docs/work/` for existing work items
-3. **Create work item if needed**: Use `make nimsforestwork-newissue` for new tasks
+2. **Triage loop**: Repeat until `docs/work/issues/new/` is empty:
+   - Check for untriaged items in `issues/new/`
+   - Claim one by moving to `triaging/`: `git mv docs/work/issues/new/item.md docs/work/issues/triaging/`
+   - Commit and push immediately to prevent conflicts: `git commit -m "work: claim for triage" && git push`
+   - Analyze and promote to appropriate category
+   - Commit and push the promotion: `git commit -m "work: promote to category" && git push`
+3. **Verify triage complete**: Ensure `issues/new/` is empty before proceeding
 
-### 2. Issue Intake Process
+### 2. Development Work
+
+1. **Ensure all triage work is done**: `issues/new/` must be empty
+2. **Check existing work**: Look in `docs/work/` for items in `ready*` states
+3. **Claim development work**: Move item to appropriate `in*` state and push immediately
+4. **Create work item if needed**: Use `make nimsforestwork-newissue` only if no existing work exists
+
+### 3. Issue Intake Process
 
 All requests start as issues for proper categorization:
 
@@ -28,14 +40,14 @@ All requests start as issues for proper categorization:
 
 Once categorized, items move to appropriate work categories.
 
-### 3. Work Item Categories
+### 4. Work Item Categories
 
 - **bugs/** - Fix broken functionality
 - **changerequests/** - Modify existing functionality  
 - **newfeatures/** - Add new functionality (renamed from proposals)
 - **improvedocumentation/** - Improve documentation
 
-### 4. Workflow States
+### 5. Workflow States
 
 Each category follows the enterprise workflow:
 
@@ -49,44 +61,60 @@ Each category follows the enterprise workflow:
 8. **signedoff/** - Complete and approved
 9. **pendingfeedback/** - Blocked waiting for clarification (bugs/changerequests only)
 
-### 5. Final States
+### 6. Final States
 
 - **archive/production/** - Successfully deployed to production
 - **archive/rejected/** - Rejected or cancelled items
 
-### 6. State Transitions
+### 7. State Transitions
 
 Use git to move files between states:
 
 ```bash
-# Issue intake and categorization
+# Issue intake and categorization (with immediate push to claim)
 git mv docs/work/issues/new/myrequest.md docs/work/issues/triaging/
-git commit -m "work: triage my request"
+git commit -m "work: claim for triage - my request"
+git push
 
-# Promote to appropriate category
+# Promote to appropriate category (with immediate push)
 git mv docs/work/issues/triaging/myrequest.md docs/work/newfeatures/next/myfeature.md
 git commit -m "work: promote to new feature"
+git push
 
-# Move through development workflow
+# Move through development workflow (claim by moving to in* state)
 git mv docs/work/newfeatures/next/myfeature.md docs/work/newfeatures/readyforanalysis/
 git commit -m "work: ready for analysis - my feature"
+git push
 
 git mv docs/work/newfeatures/readyforanalysis/myfeature.md docs/work/newfeatures/inanalysis/
-git commit -m "work: start analysis - my feature"
+git commit -m "work: claim and start analysis - my feature"
+git push
 
 git mv docs/work/newfeatures/inanalysis/myfeature.md docs/work/newfeatures/readyfordevelopment/
 git commit -m "work: ready for development - my feature"
+git push
+
+git mv docs/work/newfeatures/readyfordevelopment/myfeature.md docs/work/newfeatures/indevelopment/
+git commit -m "work: claim and start development - my feature"
+git push
 
 # Continue through testing and completion
 git mv docs/work/newfeatures/indevelopment/myfeature.md docs/work/newfeatures/readyfortesting/
 git commit -m "work: ready for testing - my feature"
+git push
+
+git mv docs/work/newfeatures/readyfortesting/myfeature.md docs/work/newfeatures/intesting/
+git commit -m "work: claim and start testing - my feature"
+git push
 
 git mv docs/work/newfeatures/intesting/myfeature.md docs/work/newfeatures/signedoff/
 git commit -m "work: signed off - my feature"
+git push
 
 # Final archive
 git mv docs/work/newfeatures/signedoff/myfeature.md docs/work/archive/production/
 git commit -m "work: deployed to production - my feature"
+git push
 ```
 
 ## Available Commands
@@ -113,15 +141,14 @@ git commit -m "work: deployed to production - my feature"
 ### For Any Development Task:
 
 1. **Start**: `make nimsforestwork-hello`
-2. **Check**: Look in `docs/work/` for existing related work items
-3. **Create**: If no existing item, run `make nimsforestwork-newissue`
-4. **Triage**: Move issue from `new/` to `triaging/` for review
-5. **Categorize**: Promote issue to appropriate category (bug/changerequest/newfeature/documentation)
-6. **Analyze**: Move to `readyforanalysis/` → `inanalysis/` → `readyfordevelopment/`
-7. **Develop**: Move to `indevelopment/` during implementation
-8. **Test**: Move to `readyfortesting/` → `intesting/` → `signedoff/`
-9. **Deploy**: Move to `archive/production/` after deployment
-10. **Block**: Move to `pendingfeedback/` if blocked (bugs/changerequests only)
+2. **Complete triage**: Process all items in `issues/new/` until empty
+3. **Check existing work**: Look in `docs/work/` for items in `ready*` states
+4. **Claim work**: Move to appropriate `in*` state and push immediately
+5. **Create new work**: Only if no existing items, use `make nimsforestwork-newissue`
+6. **Work through states**: `ready*` → `in*` → `ready*` (next stage)
+7. **Always push**: Commit and push immediately after each state change
+8. **Complete**: Move to `signedoff/` → `archive/production/`
+9. **Block**: Move to `pendingfeedback/` if blocked (bugs/changerequests only)
 
 ### Creating New Work Items
 

@@ -13,7 +13,7 @@
 #   make nimsforestwork-lint
 #
 
-.PHONY: nimsforestwork-help nimsforestwork-hello nimsforestwork-init nimsforestwork-lint nimsforestwork-newissue nimsforestwork-addtomainmakefile nimsforestwork-removefromainmakefile nimsforestwork-setup-workspace
+.PHONY: nimsforestwork-help nimsforestwork-hello nimsforestwork-init nimsforestwork-lint nimsforestwork-newissue nimsforestwork-addtomainmakefile nimsforestwork-removefromainmakefile nimsforestwork-setup-workspace nimsforestwork-check-triage nimsforestwork-claim-and-push
 
 # Show complete help and workflow guidance
 nimsforestwork-help:
@@ -65,6 +65,8 @@ nimsforestwork-help:
 	@echo "  nimsforestwork-addtomainmakefile - Integrate with project Makefile"
 	@echo "  nimsforestwork-init              - Initialize work folder structure"
 	@echo "  nimsforestwork-newissue          - Create new issue"
+	@echo "  nimsforestwork-check-triage      - Check how many items need triage"
+	@echo "  nimsforestwork-claim-and-push    - Helper for claiming work with immediate push"
 	@echo "  nimsforestwork-lint              - Validate all work items"
 	@echo "  nimsforestwork-setup-workspace   - Transform repo into worktree workspace"
 	@echo ""
@@ -270,6 +272,75 @@ nimsforestwork-lint:
 	@echo "📖 Browse work items in docs visualizer at docs/work/"
 	@echo ""
 	@echo "✅ NimsforestWork validation complete!"
+
+# Check how many items need triage
+nimsforestwork-check-triage:
+	@echo "🌲 Triage Status Check"
+	@echo "======================"
+	@echo ""
+	@if [ ! -d docs/work/issues/new ]; then \
+		echo "❌ docs/work/issues/new/ not found. Run 'make nimsforestwork-init' first"; \
+		exit 1; \
+	fi
+	@TRIAGE_COUNT=$$(find docs/work/issues/new -name '*.md' ! -name 'template.md' 2>/dev/null | wc -l); \
+	echo "📥 Items needing triage: $$TRIAGE_COUNT"; \
+	if [ $$TRIAGE_COUNT -gt 0 ]; then \
+		echo ""; \
+		echo "📋 Items in issues/new/:"; \
+		find docs/work/issues/new -name '*.md' ! -name 'template.md' -exec basename {} .md \; 2>/dev/null | sed 's/^/  - /'; \
+		echo ""; \
+		echo "⚠️  Complete triage before starting development work"; \
+		echo "Usage: git mv docs/work/issues/new/ITEM.md docs/work/issues/triaging/ && git commit && git push"; \
+	else \
+		echo "✅ No items need triage - ready for development work"; \
+	fi
+
+# Helper for claiming work with immediate push pattern
+nimsforestwork-claim-and-push:
+	@echo "🌲 Claim and Push Helper"
+	@echo "========================"
+	@echo ""
+	@if [ -z "$(SOURCE)" ] || [ -z "$(TARGET)" ] || [ -z "$(MESSAGE)" ]; then \
+		echo "❌ Required parameters missing"; \
+		echo ""; \
+		echo "Usage:"; \
+		echo "  make nimsforestwork-claim-and-push \\"; \
+		echo "    SOURCE=docs/work/issues/new/item.md \\"; \
+		echo "    TARGET=docs/work/issues/triaging/ \\"; \
+		echo "    MESSAGE='claim for triage - item description'"; \
+		echo ""; \
+		echo "Examples:"; \
+		echo "  # Claim for triage:"; \
+		echo "  make nimsforestwork-claim-and-push \\"; \
+		echo "    SOURCE=docs/work/issues/new/myissue.md \\"; \
+		echo "    TARGET=docs/work/issues/triaging/ \\"; \
+		echo "    MESSAGE='claim for triage - my issue'"; \
+		echo ""; \
+		echo "  # Claim for development:"; \
+		echo "  make nimsforestwork-claim-and-push \\"; \
+		echo "    SOURCE=docs/work/newfeatures/readyfordevelopment/myfeature.md \\"; \
+		echo "    TARGET=docs/work/newfeatures/indevelopment/ \\"; \
+		echo "    MESSAGE='claim and start development - my feature'"; \
+		exit 1; \
+	fi
+	@echo "📁 Moving: $(SOURCE)"
+	@echo "📍 To: $(TARGET)"
+	@echo "💬 Message: $(MESSAGE)"
+	@echo ""
+	@if [ ! -f "$(SOURCE)" ]; then \
+		echo "❌ Source file not found: $(SOURCE)"; \
+		exit 1; \
+	fi
+	@if [ ! -d "$(TARGET)" ]; then \
+		echo "❌ Target directory not found: $(TARGET)"; \
+		exit 1; \
+	fi
+	@git mv "$(SOURCE)" "$(TARGET)"
+	@git commit -m "work: $(MESSAGE)"
+	@git push
+	@echo "✅ Work item claimed and pushed successfully!"
+	@echo ""
+	@echo "🔒 This item is now locked to you until you move it to the next state"
 
 # Add this Makefile to the main project Makefile
 nimsforestwork-addtomainmakefile:

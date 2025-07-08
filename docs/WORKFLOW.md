@@ -170,15 +170,39 @@ Further statuses same as general Product Backlog lifecycle.
 
 ## State Transitions
 
+### Push-to-Claim Pattern
+
+**Critical**: All state transitions must be immediately pushed to origin to prevent concurrent work conflicts.
+
+```bash
+# Standard pattern for claiming work
+git mv source/path/item.md target/path/
+git commit -m "work: claim - item description"
+git push  # IMMEDIATE PUSH REQUIRED
+```
+
+This creates a **distributed locking mechanism** where the first person to push claims the work item.
+
 ### Standard Flow
-1. **Intake**: issues/new/ → issues/triaging/ → categorization
-2. **Development**: next/ → readyforanalysis/ → inanalysis/ → readyfordevelopment/ → indevelopment/ → readyfortesting/ → intesting/ → signedoff/
-3. **Completion**: archive/production/ or archive/rejected/
+1. **Intake**: issues/new/ → issues/triaging/ → categorization (with immediate push after each move)
+2. **Development**: next/ → readyforanalysis/ → inanalysis/ → readyfordevelopment/ → indevelopment/ → readyfortesting/ → intesting/ → signedoff/ (push after each transition)
+3. **Completion**: archive/production/ or archive/rejected/ (final push)
+
+### Claiming Work Items
+
+**Triage Claiming**:
+- Move from `issues/new/` to `issues/triaging/` and push immediately
+- This prevents others from triaging the same item
+
+**Development Claiming**:
+- Move from `ready*` states to `in*` states and push immediately  
+- Only move to `in*` states when you're actively working on the item
+- This prevents concurrent development work
 
 ### Exception Flows
-- **Pending Information**: Any state → pendingfeedback/ → return to appropriate state
-- **Rework Required**: intesting/ → readyforanalysis/ (as bug)
-- **Cancellation**: Any state → archive/rejected/
+- **Pending Information**: Any state → pendingfeedback/ → return to appropriate state (push each move)
+- **Rework Required**: intesting/ → readyforanalysis/ (as bug, push immediately)
+- **Cancellation**: Any state → archive/rejected/ (push immediately)
 
 ## Quality Gates
 
