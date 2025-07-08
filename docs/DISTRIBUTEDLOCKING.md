@@ -51,8 +51,10 @@ The nimsforestwork system uses **git branch creation as a distributed locking me
 **Examples**:
 - `stamp-lostmypassword` - Agent stamping work from `new/` to `stamped/`
 - `triaging-lostmypassword-a1b2c3d4` - Agent categorizing stamped work
+- `pending-lostmypassword-a1b2c3d4` - Agent moving work to pending state
 - `readyforanalysis-userauth-b5c6d7e8` - Agent analyzing requirements
 - `indevelopment-userauth-b5c6d7e8` - Agent doing development work
+- `pending-userauth-b5c6d7e8` - Agent moving work to pending feedback
 
 ### Claiming Process with Git Worktrees
 
@@ -224,10 +226,12 @@ fi
 | Current State | Claiming Branch | Next State | Work Type |
 |---------------|----------------|------------|-----------|
 | `new/` | `stamp-{item}` | `stamped/` | Add UUID |
-| `stamped/` | `triaging-{item}` | `{category}/next/` | Categorize |
+| `stamped/` | `triaging-{item}` | `{category}/next/` OR `pending-{item}/` | Categorize |
+| `pending-{item}/` | `triaging-{item}` | `{category}/next/` | Resume categorization |
 | `next/` | `readyforanalysis-{item}` | `inanalysis/` | Requirements |
 | `readyforanalysis/` | `inanalysis-{item}` | `readyfordevelopment/` | Analysis |
 | `readyfordevelopment/` | `indevelopment-{item}` | `readyfortesting/` | Development |
+| `{any-state}/` | `pending-{item}` | `pending-{item}/` | Need user feedback |
 | `readyfortesting/` | `intesting-{item}` | `signedoff/` | Testing |
 | `signedoff/` | `production-{item}` | `archive/production/` | Deploy |
 

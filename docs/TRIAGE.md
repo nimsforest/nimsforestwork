@@ -64,13 +64,26 @@ git push -u origin triaging-lostmypassword-a1b2c3d4
 # Step 2: Analyze and categorize
 # Read the work item, determine if it's a bug, changerequest, newfeature, etc.
 
-# Step 3: Create folder and move file into it (becomes work item folder)
-mkdir -p docs/work/bugs/next/lostmypassword-a1b2c3d4
-git mv docs/work/issues/stamped/lostmypassword-a1b2c3d4.md \
-       docs/work/bugs/next/lostmypassword-a1b2c3d4/lostmypassword-a1b2c3d4.md
-git add docs/work/bugs/next/lostmypassword-a1b2c3d4/
-git commit -m "work: categorize as bug - lostmypassword-a1b2c3d4"
-git push
+# Step 3a: If more information needed - move to pending
+if more_info_needed; then
+    mkdir -p docs/work/issues/pending-lostmypassword-a1b2c3d4
+    git mv docs/work/issues/stamped/lostmypassword-a1b2c3d4.md \
+           docs/work/issues/pending-lostmypassword-a1b2c3d4/lostmypassword-a1b2c3d4.md
+    # Add communication log explaining what info is needed
+    echo "Need: More details about error conditions" > \
+           docs/work/issues/pending-lostmypassword-a1b2c3d4/feedback-needed.md
+    git add docs/work/issues/pending-lostmypassword-a1b2c3d4/
+    git commit -m "work: pending feedback - lostmypassword-a1b2c3d4"
+    git push
+else
+    # Step 3b: Create category folder and move file into it
+    mkdir -p docs/work/bugs/next/lostmypassword-a1b2c3d4
+    git mv docs/work/issues/stamped/lostmypassword-a1b2c3d4.md \
+           docs/work/bugs/next/lostmypassword-a1b2c3d4/lostmypassword-a1b2c3d4.md
+    git add docs/work/bugs/next/lostmypassword-a1b2c3d4/
+    git commit -m "work: categorize as bug - lostmypassword-a1b2c3d4"
+    git push
+fi
 
 # Step 4: Clean up triaging branch
 git checkout main
@@ -86,6 +99,10 @@ docs/work/issues/
 │   └── lostmypassword.md         # Simple files
 ├── stamped/                      # UUID-stamped work items ready for categorization  
 │   └── lostmypassword-a1b2c3d4.md  # Simple files with UUIDs
+├── pending-{item-uuid}/          # Waiting for user feedback before categorization
+│   └── lostmypassword-a1b2c3d4/  # Work item folders
+│       ├── lostmypassword-a1b2c3d4.md  # Original work item
+│       └── feedback-needed.md    # What info is needed from user
 └── template.md                   # Template for new issues
 
 docs/work/bugs/
@@ -107,7 +124,10 @@ docs/work/bugs/
 ├── readyfortesting/              # Ready for testing
 ├── intesting/                    # Currently being tested
 ├── signedoff/                    # Complete and approved
-└── pendingfeedback/              # Blocked waiting for clarification
+└── pending-{item-uuid}/          # Blocked waiting for user clarification
+    └── userauth-b5c6d7e8/        # Work item folders
+        ├── userauth-b5c6d7e8.md  # Original work item
+        └── feedback-needed.md    # What info is needed from user
 ```
 
 ## Branch Naming Conventions
@@ -120,7 +140,12 @@ docs/work/bugs/
 ### Triaging Branches  
 - **Pattern**: `triaging-{stamped-filename}`
 - **Example**: `triaging-lostmypassword-a1b2c3d4`
-- **Lifecycle**: Create → Push → Categorize → Delete
+- **Lifecycle**: Create → Push → Categorize OR Pending → Delete
+
+### Pending Branches
+- **Pattern**: `pending-{item-uuid}`
+- **Example**: `pending-lostmypassword-a1b2c3d4`
+- **Used for**: Moving items to pending state during triage or development
 
 ## Error Handling
 
@@ -163,10 +188,31 @@ git commit -m "Add lost password issue"
 git push
 ```
 
+### User Feedback Loop
+When more information is needed, users provide feedback and resume triage:
+
+```bash
+# User finds their item in pending state
+ls docs/work/issues/pending-lostmypassword-a1b2c3d4/
+# - lostmypassword-a1b2c3d4.md (original)
+# - feedback-needed.md (what info is needed)
+
+# User adds additional information
+echo "Error occurs when using Chrome browser" > \
+  docs/work/issues/pending-lostmypassword-a1b2c3d4/additional-info.md
+
+# User manually moves back to stamped for re-triage
+git mv docs/work/issues/pending-lostmypassword-a1b2c3d4/lostmypassword-a1b2c3d4.md \
+       docs/work/issues/stamped/lostmypassword-a1b2c3d4.md
+git commit -m "user: provided additional info for lostmypassword-a1b2c3d4"
+git push
+```
+
 ### Automated Processing
-- Agents continuously monitor `new/` folder
+- Agents continuously monitor `new/` and `stamped/` folders
 - Automatic stamping adds UUIDs asynchronously
-- No user action required after initial file creation
+- Agents process stamped items for categorization
+- No user action required except when feedback is needed
 
 ## Quality Assurance
 

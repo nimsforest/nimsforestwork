@@ -21,6 +21,10 @@ docs/work/
 │   │   └── lostmypassword.md         # Simple .md files
 │   ├── stamped/                      # UUID-stamped files ready for categorization
 │   │   └── lostmypassword-a1b2c3d4.md  # Files with unique identifiers
+│   ├── pending-{item-uuid}/          # Waiting for user feedback before categorization
+│   │   └── lostmypassword-a1b2c3d4/  # Work item folders
+│   │       ├── lostmypassword-a1b2c3d4.md  # Original work item
+│   │       └── feedback-needed.md    # What info is needed from user
 │   └── template.md                   # Template for new issues
 ├── bugs/                             # Categorized bug work items
 │   ├── next/                         # Ready for business rating assignment
@@ -39,9 +43,9 @@ docs/work/
 │   ├── intesting/                    # Currently being tested
 │   ├── signedoff/                    # Complete and approved
 │   └── pendingfeedback/              # Blocked waiting for clarification
-├── changerequests/                   # Same structure as bugs/
-├── newfeatures/                      # Same structure as bugs/ (no pendingfeedback)
-├── improvedocumentation/             # Same structure as bugs/ (no pendingfeedback)
+├── changerequests/                   # Same structure as bugs/ (with pending-{item-uuid}/)
+├── newfeatures/                      # Same structure as bugs/ (with pending-{item-uuid}/)
+├── improvedocumentation/             # Same structure as bugs/ (with pending-{item-uuid}/)
 └── archive/
     ├── production/                   # Successfully deployed
     └── rejected/                     # Rejected or cancelled items
@@ -54,7 +58,9 @@ All work items enter through the **triage process** documented in **TRIAGE.md**.
 ### Two-Stage Triage Process
 
 1. **Stamping** (`new/` → `stamped/`): Add UUID to prevent duplicates
-2. **Categorization** (`stamped/` → `{category}/next/`): Determine work type and create folder structure
+2. **Categorization** (`stamped/` → `{category}/next/` OR `pending-{item}/`): Determine work type and create folder structure, or request more user information
+
+**User Feedback Loop**: If more information is needed, items move to `pending-{item-uuid}/` state. Users provide additional information and manually move items back to `stamped/` for re-triage.
 
 See **TRIAGE.md** for complete implementation details.
 
@@ -102,7 +108,7 @@ All work items follow this **FIFO-based state progression** using distributed lo
 6. **readyfortesting/**: Ready for testing
 7. **intesting/**: Currently being tested (claimed via branch)
 8. **signedoff/**: Complete and approved
-9. **pendingfeedback/**: Blocked waiting for clarification (bugs/changerequests only)
+9. **pending-{item-uuid}/**: Blocked waiting for user clarification (any category, any state)
 
 #### State Transition Claiming
 
@@ -182,10 +188,11 @@ git mv docs/work/newfeatures/readyfordevelopment/${WORK_ITEM}/ \
 ```
 
 ### Exception Flows
-- **Pending Information**: Any state → `pendingfeedback/` → return to appropriate state
+- **Pending Information**: Any state → `pending-{item-uuid}/` → return to appropriate state (user-driven)
 - **Rework Required**: `intesting/` → `readyforanalysis/` (as new bug)
 - **Cancellation**: Any state → `archive/rejected/`
 - **Stale Branch Recovery**: Automated cleanup of abandoned work
+- **User Feedback**: Users manually move items from `pending-{item-uuid}/` back to workflow when they provide information
 
 ## Quality Gates
 

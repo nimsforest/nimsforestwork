@@ -13,7 +13,7 @@
 #   make nimsforestwork-lint
 #
 
-.PHONY: nimsforestwork-help nimsforestwork-hello nimsforestwork-init nimsforestwork-lint nimsforestwork-newissue nimsforestwork-addtomainmakefile nimsforestwork-removefromainmakefile nimsforestwork-setup-workspace nimsforestwork-check-triage nimsforestwork-claim-and-push
+.PHONY: nimsforestwork-help nimsforestwork-hello nimsforestwork-init nimsforestwork-lint nimsforestwork-newissue nimsforestwork-addtomainmakefile nimsforestwork-removefromainmakefile nimsforestwork-setup-workspace nimsforestwork-check-triage nimsforestwork-stamp-work nimsforestwork-claim-work nimsforestwork-check-stale-branches nimsforestwork-cleanup-stale
 
 # Show complete help and workflow guidance
 nimsforestwork-help:
@@ -36,17 +36,20 @@ nimsforestwork-help:
 	@echo ""
 	@echo "3. 📁 Initialize Work Structure:"
 	@echo "   make nimsforestwork-init"
-	@echo "   (Creates docs/work/ with enterprise workflow folders)"
+	@echo "   (Creates docs/work/ with distributed workflow folders)"
 	@echo ""
 	@echo "4. 📝 Create Issues:"
 	@echo "   make nimsforestwork-newissue TITLE=mytask MESSAGE=\"description\""
+	@echo "   # Or drop .md files directly into docs/work/issues/new/"
 	@echo ""
-	@echo "5. 🔄 Move Through Workflow (using git mv):"
-	@echo "   git mv docs/work/issues/new/mytask.md docs/work/issues/triaging/"
-	@echo "   git mv docs/work/issues/triaging/mytask.md docs/work/newfeatures/next/"
-	@echo "   git mv docs/work/newfeatures/next/mytask.md docs/work/newfeatures/readyforanalysis/"
-	@echo "   # ... continue through: inanalysis → readyfordevelopment → indevelopment"
-	@echo "   # ... → readyfortesting → intesting → signedoff → archive/production"
+	@echo "5. 🏷️ Triage Process:"
+	@echo "   make nimsforestwork-stamp-work        # Stamp with UUIDs"
+	@echo "   # Categorize stamped items (branch-based claiming)"
+	@echo ""
+	@echo "6. 🌳 Development with Git Worktrees:"
+	@echo "   make nimsforestwork-claim-work WORK_ITEM=task-a1b2c3d4 \\"
+	@echo "        SOURCE_STATE=readyfordevelopment TARGET_STATE=indevelopment"
+	@echo "   # Work in isolated worktree, merge back when complete"
 	@echo ""
 	@echo "🌳 Git Worktree Workflow for Distributed Nims:"
 	@echo ""
@@ -66,20 +69,26 @@ nimsforestwork-help:
 	@echo "  nimsforestwork-init              - Initialize work folder structure"
 	@echo "  nimsforestwork-newissue          - Create new issue"
 	@echo "  nimsforestwork-check-triage      - Check how many items need triage"
-	@echo "  nimsforestwork-claim-and-push    - Helper for claiming work with immediate push"
+	@echo "  nimsforestwork-stamp-work        - Stamp work items with UUID (new→stamped)"
+	@echo "  nimsforestwork-claim-work        - Claim work using branch-based locking"
+	@echo "  nimsforestwork-check-stale-branches - Check for abandoned work branches"
+	@echo "  nimsforestwork-cleanup-stale     - Clean up stale branches and worktrees"
 	@echo "  nimsforestwork-lint              - Validate all work items"
 	@echo "  nimsforestwork-setup-workspace   - Transform repo into worktree workspace"
 	@echo ""
 	@echo "📊 Work Categories & States:"
 	@echo ""
-	@echo "Issues (Intake):     new → triaging → pending"
-	@echo "Bugs:               next → readyforanalysis → inanalysis → readyfordevelopment"
+	@echo "Triage Flow:        new → stamped → {category}/next OR pending-{item-uuid}"
+	@echo "Development Flow:   next → readyforanalysis → inanalysis → readyfordevelopment"
 	@echo "                    → indevelopment → readyfortesting → intesting → signedoff"
-	@echo "                    + pendingfeedback (exception state)"
-	@echo "Change Requests:    Same as bugs"
-	@echo "New Features:       Same as bugs (no pendingfeedback)"
-	@echo "Documentation:      Same as bugs (no pendingfeedback)"
-	@echo "Archive:            production | rejected"
+	@echo "Exception States:   pending-{item-uuid} (any category, any state)"
+	@echo "Final States:       archive/production | archive/rejected"
+	@echo ""
+	@echo "🔀 Branch-Based Locking:"
+	@echo "  stamp-{item}           - Claiming stamping work"
+	@echo "  triaging-{item}        - Claiming categorization work"
+	@echo "  pending-{item}         - Claiming pending state transition work"
+	@echo "  {state}-{item}         - Claiming state transition work"
 	@echo ""
 	@echo "🤖 For AI Agent Nims:"
 	@echo "Tell your AI agent: 'Read NIMINSTRUCTIONS.md and follow those instructions'"
@@ -87,7 +96,10 @@ nimsforestwork-help:
 	@echo "👨‍💻 For Human Nims:"
 	@echo "Read NIMINSTRUCTIONS.md for complete workflow guidance"
 	@echo ""
-	@echo "📖 For detailed workflow: Read docs/WORKFLOW.md"
+	@echo "📖 Documentation:"
+	@echo "  docs/WORKFLOW.md         - High-level workflow overview"
+	@echo "  docs/TRIAGE.md          - Triage process and stamping workflow"
+	@echo "  docs/DISTRIBUTEDLOCKING.md - Branch-based distributed locking"
 
 # Check system compatibility for work management
 nimsforestwork-hello:
@@ -127,14 +139,17 @@ nimsforestwork-hello:
 	@echo ""
 	@if [ -f Makefile ] && grep -q "nimsforestwork" Makefile 2>/dev/null; then \
 		echo "✅ Ready to use! Next steps:"; \
-		echo "  make nimsforestwork-init     - Initialize work folder structure"; \
-		echo "  make nimsforestwork-newissue - Create a new work item"; \
-		echo "  make nimsforestwork-lint     - Validate work items"; \
+		echo "  make nimsforestwork-init           - Initialize work folder structure"; \
+		echo "  make nimsforestwork-newissue       - Create a new work item"; \
+		echo "  make nimsforestwork-stamp-work     - Process triage queue"; \
+		echo "  make nimsforestwork-claim-work     - Claim work with branch locking"; \
+		echo "  make nimsforestwork-lint           - Validate work items"; \
 	else \
 		echo "🔧 Integration needed:"; \
 		echo "  1. make -f MAKEFILE.nimsforestwork nimsforestwork-addtomainmakefile"; \
 		echo "  2. make nimsforestwork-init"; \
 		echo "  3. make nimsforestwork-newissue"; \
+		echo "  4. make nimsforestwork-stamp-work"; \
 	fi
 
 # Initialize work folder structure
@@ -143,7 +158,7 @@ nimsforestwork-init:
 	@echo "=================================================="
 	@echo ""
 	@echo "📁 Creating work management folders in docs/work/..."
-	@mkdir -p docs/work/issues/new docs/work/issues/triaging docs/work/issues/pending
+	@mkdir -p docs/work/issues/new docs/work/issues/stamped
 	@mkdir -p docs/work/bugs/next docs/work/bugs/readyforanalysis docs/work/bugs/inanalysis docs/work/bugs/readyfordevelopment docs/work/bugs/indevelopment docs/work/bugs/readyfortesting docs/work/bugs/intesting docs/work/bugs/signedoff docs/work/bugs/pendingfeedback
 	@mkdir -p docs/work/changerequests/next docs/work/changerequests/readyforanalysis docs/work/changerequests/inanalysis docs/work/changerequests/readyfordevelopment docs/work/changerequests/indevelopment docs/work/changerequests/readyfortesting docs/work/changerequests/intesting docs/work/changerequests/signedoff docs/work/changerequests/pendingfeedback
 	@mkdir -p docs/work/newfeatures/next docs/work/newfeatures/readyforanalysis docs/work/newfeatures/inanalysis docs/work/newfeatures/readyfordevelopment docs/work/newfeatures/indevelopment docs/work/newfeatures/readyfortesting docs/work/newfeatures/intesting docs/work/newfeatures/signedoff
@@ -202,10 +217,11 @@ nimsforestwork-init:
 	@echo "📖 Work items now visible in docs visualizer!"
 	@echo ""
 	@echo "Usage:"
-	@echo "  1. Create work items in docs/work/{type}/new/"
-	@echo "  2. Move through workflow states as you progress"
-	@echo "  3. Every merge to main goes to production (Netflix model)"
-	@echo "  4. Browse work items through docs visualizer"
+	@echo "  1. Create work items: 'make nimsforestwork-newissue' or drop .md into issues/new/"
+	@echo "  2. Process triage: 'make nimsforestwork-stamp-work'"
+	@echo "  3. Claim work: 'make nimsforestwork-claim-work' with branch-based locking"
+	@echo "  4. Work in git worktrees for isolation and concurrency"
+	@echo "  5. Every merge to main goes to production (Netflix model)"
 	@echo ""
 	@echo "Next: make nimsforestwork-newissue"
 
@@ -295,52 +311,157 @@ nimsforestwork-check-triage:
 		echo "✅ No items need triage - ready for development work"; \
 	fi
 
-# Helper for claiming work with immediate push pattern
-nimsforestwork-claim-and-push:
-	@echo "🌲 Claim and Push Helper"
-	@echo "========================"
+# Stamp work items with UUID (new → stamped)
+nimsforestwork-stamp-work:
+	@echo "🌲 Stamp Work Items with UUID"
+	@echo "=============================="
 	@echo ""
-	@if [ -z "$(SOURCE)" ] || [ -z "$(TARGET)" ] || [ -z "$(MESSAGE)" ]; then \
+	@if [ ! -d docs/work/issues/new ]; then \
+		echo "❌ docs/work/issues/new/ not found. Run 'make nimsforestwork-init' first"; \
+		exit 1; \
+	fi
+	@WORK_ITEMS=$$(find docs/work/issues/new -name '*.md' ! -name 'template.md' 2>/dev/null); \
+	if [ -z "$$WORK_ITEMS" ]; then \
+		echo "✅ No work items to stamp"; \
+		exit 0; \
+	fi; \
+	for ITEM in $$WORK_ITEMS; do \
+		BASENAME=$$(basename "$$ITEM" .md); \
+		BRANCH_NAME="stamp-$$BASENAME"; \
+		echo "🏷️ Attempting to stamp: $$BASENAME"; \
+		if git checkout -b "$$BRANCH_NAME" 2>/dev/null; then \
+			if git push -u origin "$$BRANCH_NAME" 2>/dev/null; then \
+				UUID=$$(uuidgen | cut -d'-' -f1); \
+				NEW_NAME="$$BASENAME-$$UUID.md"; \
+				git mv "$$ITEM" "docs/work/issues/stamped/$$NEW_NAME"; \
+				git commit -m "work: stamp with UUID - $$NEW_NAME"; \
+				git push; \
+				echo "✅ Stamped: $$BASENAME → $$NEW_NAME"; \
+				git checkout main; \
+				git branch -d "$$BRANCH_NAME"; \
+				git push origin --delete "$$BRANCH_NAME"; \
+			else \
+				echo "⏭️ Item $$BASENAME already being stamped by another agent"; \
+				git checkout main; \
+				git branch -d "$$BRANCH_NAME"; \
+			fi; \
+		else \
+			echo "⏭️ Item $$BASENAME already being stamped locally"; \
+		fi; \
+	done
+
+# Claim work using branch-based locking with worktrees
+nimsforestwork-claim-work:
+	@echo "🌲 Claim Work with Branch-Based Locking"
+	@echo "========================================"
+	@echo ""
+	@if [ -z "$(WORK_ITEM)" ] || [ -z "$(SOURCE_STATE)" ] || [ -z "$(TARGET_STATE)" ]; then \
 		echo "❌ Required parameters missing"; \
 		echo ""; \
 		echo "Usage:"; \
-		echo "  make nimsforestwork-claim-and-push \\"; \
-		echo "    SOURCE=docs/work/issues/new/item.md \\"; \
-		echo "    TARGET=docs/work/issues/triaging/ \\"; \
-		echo "    MESSAGE='claim for triage - item description'"; \
+		echo "  make nimsforestwork-claim-work \\"; \
+		echo "    WORK_ITEM=userauth-b5c6d7e8 \\"; \
+		echo "    SOURCE_STATE=readyfordevelopment \\"; \
+		echo "    TARGET_STATE=indevelopment"; \
 		echo ""; \
 		echo "Examples:"; \
-		echo "  # Claim for triage:"; \
-		echo "  make nimsforestwork-claim-and-push \\"; \
-		echo "    SOURCE=docs/work/issues/new/myissue.md \\"; \
-		echo "    TARGET=docs/work/issues/triaging/ \\"; \
-		echo "    MESSAGE='claim for triage - my issue'"; \
+		echo "  # Claim analysis work:"; \
+		echo "  make nimsforestwork-claim-work \\"; \
+		echo "    WORK_ITEM=userauth-b5c6d7e8 \\"; \
+		echo "    SOURCE_STATE=readyforanalysis \\"; \
+		echo "    TARGET_STATE=inanalysis"; \
 		echo ""; \
-		echo "  # Claim for development:"; \
-		echo "  make nimsforestwork-claim-and-push \\"; \
-		echo "    SOURCE=docs/work/newfeatures/readyfordevelopment/myfeature.md \\"; \
-		echo "    TARGET=docs/work/newfeatures/indevelopment/ \\"; \
-		echo "    MESSAGE='claim and start development - my feature'"; \
+		echo "  # Claim development work:"; \
+		echo "  make nimsforestwork-claim-work \\"; \
+		echo "    WORK_ITEM=userauth-b5c6d7e8 \\"; \
+		echo "    SOURCE_STATE=readyfordevelopment \\"; \
+		echo "    TARGET_STATE=indevelopment"; \
 		exit 1; \
 	fi
-	@echo "📁 Moving: $(SOURCE)"
-	@echo "📍 To: $(TARGET)"
-	@echo "💬 Message: $(MESSAGE)"
+	@BRANCH_NAME="$(TARGET_STATE)-$(WORK_ITEM)"; \
+	WORKTREE_PATH="../$$BRANCH_NAME"; \
+	echo "🎯 Attempting to claim: $(WORK_ITEM)"; \
+	echo "📁 Source state: $(SOURCE_STATE)"; \
+	echo "📁 Target state: $(TARGET_STATE)"; \
+	echo "🌳 Branch: $$BRANCH_NAME"; \
+	if git worktree add "$$WORKTREE_PATH" -b "$$BRANCH_NAME" 2>/dev/null; then \
+		cd "$$WORKTREE_PATH"; \
+		if git push -u origin "$$BRANCH_NAME" 2>/dev/null; then \
+			echo "✅ Work claimed successfully!"; \
+			echo "📂 Worktree created at: $$WORKTREE_PATH"; \
+			echo ""; \
+			echo "Next steps:"; \
+			echo "  cd $$WORKTREE_PATH"; \
+			echo "  # Do your work"; \
+			echo "  # When complete, merge back to main and clean up"; \
+		else \
+			echo "❌ Failed to claim - another agent already claimed this work"; \
+			cd ..; \
+			git worktree remove "$$WORKTREE_PATH"; \
+			git branch -d "$$BRANCH_NAME"; \
+		fi; \
+	else \
+		echo "❌ Failed to create worktree - branch may already exist locally"; \
+	fi
+
+# Check for stale branches that indicate abandoned work
+nimsforestwork-check-stale-branches:
+	@echo "🌲 Check for Stale Branches"
+	@echo "============================"
 	@echo ""
-	@if [ ! -f "$(SOURCE)" ]; then \
-		echo "❌ Source file not found: $(SOURCE)"; \
-		exit 1; \
+	@echo "🔍 Checking for potentially stale work branches..."
+	@STALE_COUNT=0; \
+	for BRANCH in $$(git branch -r | grep -E 'origin/(stamp-|triaging-|.*-.*-[a-f0-9]{8})' | sed 's|origin/||'); do \
+		CREATED_TIME=$$(git log --format="%ct" -1 "origin/$$BRANCH" 2>/dev/null); \
+		if [ -n "$$CREATED_TIME" ]; then \
+			CURRENT_TIME=$$(date +%s); \
+			AGE=$$((CURRENT_TIME - CREATED_TIME)); \
+			HOURS=$$((AGE / 3600)); \
+			if [ $$AGE -gt 86400 ]; then \
+				echo "⚠️ Stale branch: $$BRANCH ($$HOURS hours old)"; \
+				STALE_COUNT=$$((STALE_COUNT + 1)); \
+			fi; \
+		fi; \
+	done; \
+	if [ $$STALE_COUNT -eq 0 ]; then \
+		echo "✅ No stale branches found"; \
+	else \
+		echo ""; \
+		echo "Found $$STALE_COUNT stale branches"; \
+		echo "Run 'make nimsforestwork-cleanup-stale' to clean them up"; \
 	fi
-	@if [ ! -d "$(TARGET)" ]; then \
-		echo "❌ Target directory not found: $(TARGET)"; \
-		exit 1; \
-	fi
-	@git mv "$(SOURCE)" "$(TARGET)"
-	@git commit -m "work: $(MESSAGE)"
-	@git push
-	@echo "✅ Work item claimed and pushed successfully!"
+
+# Clean up stale branches and worktrees
+nimsforestwork-cleanup-stale:
+	@echo "🌲 Clean Up Stale Branches"
+	@echo "==========================="
 	@echo ""
-	@echo "🔒 This item is now locked to you until you move it to the next state"
+	@echo "🧹 Cleaning up stale work branches (>24h old)..."
+	@CLEANED_COUNT=0; \
+	for BRANCH in $$(git branch -r | grep -E 'origin/(stamp-|triaging-|.*-.*-[a-f0-9]{8})' | sed 's|origin/||'); do \
+		CREATED_TIME=$$(git log --format="%ct" -1 "origin/$$BRANCH" 2>/dev/null); \
+		if [ -n "$$CREATED_TIME" ]; then \
+			CURRENT_TIME=$$(date +%s); \
+			AGE=$$((CURRENT_TIME - CREATED_TIME)); \
+			if [ $$AGE -gt 86400 ]; then \
+				echo "🗑️ Cleaning up stale branch: $$BRANCH"; \
+				git push origin --delete "$$BRANCH" 2>/dev/null; \
+				WORKTREE_PATH="../$$BRANCH"; \
+				if [ -d "$$WORKTREE_PATH" ]; then \
+					git worktree remove "$$WORKTREE_PATH" --force 2>/dev/null; \
+				fi; \
+				git branch -D "$$BRANCH" 2>/dev/null; \
+				CLEANED_COUNT=$$((CLEANED_COUNT + 1)); \
+			fi; \
+		fi; \
+	done; \
+	git worktree prune; \
+	if [ $$CLEANED_COUNT -eq 0 ]; then \
+		echo "✅ No stale branches to clean up"; \
+	else \
+		echo "✅ Cleaned up $$CLEANED_COUNT stale branches"; \
+		echo "🔄 Work items released back to queue"; \
+	fi
 
 # Add this Makefile to the main project Makefile
 nimsforestwork-addtomainmakefile:
@@ -367,9 +488,11 @@ nimsforestwork-addtomainmakefile:
 	echo "🎉 NimsforestWork integration complete!"; \
 	echo ""; \
 	echo "Available commands:"; \
-	echo "  make nimsforestwork-hello  - Check system compatibility"; \
-	echo "  make nimsforestwork-init   - Initialize work structure"; \
-	echo "  make nimsforestwork-lint   - Validate work items"
+	echo "  make nimsforestwork-hello       - Check system compatibility"; \
+	echo "  make nimsforestwork-init        - Initialize work structure"; \
+	echo "  make nimsforestwork-stamp-work  - Process triage queue"; \
+	echo "  make nimsforestwork-claim-work  - Claim work with branch locking"; \
+	echo "  make nimsforestwork-lint        - Validate work items"
 
 # Remove this Makefile from the main project Makefile
 nimsforestwork-removefromainmakefile:
