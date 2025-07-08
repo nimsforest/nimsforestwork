@@ -13,7 +13,79 @@
 #   make nimsforestwork-lint
 #
 
-.PHONY: nimsforestwork-hello nimsforestwork-init nimsforestwork-lint nimsforestwork-newissue nimsforestwork-addtomainmakefile nimsforestwork-removefromainmakefile nimsforestwork-setup-workspace
+.PHONY: nimsforestwork-help nimsforestwork-hello nimsforestwork-init nimsforestwork-lint nimsforestwork-newissue nimsforestwork-addtomainmakefile nimsforestwork-removefromainmakefile nimsforestwork-setup-workspace
+
+# Show complete help and workflow guidance
+nimsforestwork-help:
+	@echo "🌲 NimsforestWork - Nim-Based Work Management System"
+	@echo "====================================================="
+	@echo ""
+	@echo "📖 What is a Nim?"
+	@echo "A Nim is an entity with agency, having MECE (Mutually Exclusive, Collectively"
+	@echo "Exhaustive) roles and responsibilities within an organization - regardless of"
+	@echo "whether executed by humans, AI agents, robots, or drones."
+	@echo ""
+	@echo "🚀 Quick Start Workflow:"
+	@echo ""
+	@echo "1. 🔍 Check Compatibility:"
+	@echo "   make -f MAKEFILE.nimsforestwork nimsforestwork-hello"
+	@echo ""
+	@echo "2. 🔧 Integrate with Project (if needed):"
+	@echo "   make -f MAKEFILE.nimsforestwork nimsforestwork-addtomainmakefile"
+	@echo "   (This adds nimsforestwork commands to your main Makefile)"
+	@echo ""
+	@echo "3. 📁 Initialize Work Structure:"
+	@echo "   make nimsforestwork-init"
+	@echo "   (Creates docs/work/ with enterprise workflow folders)"
+	@echo ""
+	@echo "4. 📝 Create Issues:"
+	@echo "   make nimsforestwork-newissue TITLE=mytask MESSAGE=\"description\""
+	@echo ""
+	@echo "5. 🔄 Move Through Workflow (using git mv):"
+	@echo "   git mv docs/work/issues/new/mytask.md docs/work/issues/triaging/"
+	@echo "   git mv docs/work/issues/triaging/mytask.md docs/work/newfeatures/next/"
+	@echo "   git mv docs/work/newfeatures/next/mytask.md docs/work/newfeatures/readyforanalysis/"
+	@echo "   # ... continue through: inanalysis → readyfordevelopment → indevelopment"
+	@echo "   # ... → readyfortesting → intesting → signedoff → archive/production"
+	@echo ""
+	@echo "🌳 Git Worktree Workflow for Distributed Nims:"
+	@echo ""
+	@echo "# Create feature branch workspace"
+	@echo "git worktree add ../feature-auth feature-auth"
+	@echo "cd ../feature-auth"
+	@echo "# Multiple Nims can now collaborate in this isolated workspace"
+	@echo "# Human Nims: Strategic decisions, approvals"
+	@echo "# AI Agent Nims: Code generation, testing"
+	@echo "# Robot Nims: Deployment, hardware integration"
+	@echo ""
+	@echo "📋 Available Commands:"
+	@echo ""
+	@echo "  nimsforestwork-help              - Show this help"
+	@echo "  nimsforestwork-hello             - Check system compatibility"
+	@echo "  nimsforestwork-addtomainmakefile - Integrate with project Makefile"
+	@echo "  nimsforestwork-init              - Initialize work folder structure"
+	@echo "  nimsforestwork-newissue          - Create new issue"
+	@echo "  nimsforestwork-lint              - Validate all work items"
+	@echo "  nimsforestwork-setup-workspace   - Transform repo into worktree workspace"
+	@echo ""
+	@echo "📊 Work Categories & States:"
+	@echo ""
+	@echo "Issues (Intake):     new → triaging → pending"
+	@echo "Bugs:               next → readyforanalysis → inanalysis → readyfordevelopment"
+	@echo "                    → indevelopment → readyfortesting → intesting → signedoff"
+	@echo "                    + pendingfeedback (exception state)"
+	@echo "Change Requests:    Same as bugs"
+	@echo "New Features:       Same as bugs (no pendingfeedback)"
+	@echo "Documentation:      Same as bugs (no pendingfeedback)"
+	@echo "Archive:            production | rejected"
+	@echo ""
+	@echo "🤖 For AI Agent Nims:"
+	@echo "Tell your AI agent: 'Read NIMINSTRUCTIONS.md and follow those instructions'"
+	@echo ""
+	@echo "👨‍💻 For Human Nims:"
+	@echo "Read NIMINSTRUCTIONS.md for complete workflow guidance"
+	@echo ""
+	@echo "📖 For detailed workflow: Read docs/WORKFLOW.md"
 
 # Check system compatibility for work management
 nimsforestwork-hello:
@@ -30,13 +102,38 @@ nimsforestwork-hello:
 	@echo "   Branch: $$(git branch --show-current)"
 	@echo "   Remote: $$(git remote get-url origin 2>/dev/null || echo 'none')"
 	@echo ""
-	@echo "🎯 System compatible with nimsforestwork!"
-	@echo "   Ready for Netflix-style deployment workflow"
+	@echo "📋 Checking project structure..."
+	@if [ -f Makefile ]; then \
+		echo "✅ Makefile found"; \
+		if grep -q "nimsforestwork" Makefile 2>/dev/null; then \
+			echo "✅ NimsforestWork already integrated"; \
+		else \
+			echo "⚠️  NimsforestWork not integrated in Makefile"; \
+			echo "   Run: make -f MAKEFILE.nimsforestwork nimsforestwork-addtomainmakefile"; \
+		fi; \
+	else \
+		echo "❌ No Makefile found in project root"; \
+		echo "   Create a Makefile first, then integrate nimsforestwork"; \
+	fi
+	@if [ -f .env ]; then \
+		echo "✅ .env file found"; \
+	else \
+		echo "ℹ️  No .env file found (optional)"; \
+	fi
 	@echo ""
-	@echo "Next steps:"
-	@echo "  make nimsforestwork-init     - Initialize work folder structure"
-	@echo "  make nimsforestwork-newissue - Create a new work item interactively"
-	@echo "  make nimsforestwork-lint     - Validate work items"
+	@echo "🎯 System compatible with nimsforestwork!"
+	@echo ""
+	@if [ -f Makefile ] && grep -q "nimsforestwork" Makefile 2>/dev/null; then \
+		echo "✅ Ready to use! Next steps:"; \
+		echo "  make nimsforestwork-init     - Initialize work folder structure"; \
+		echo "  make nimsforestwork-newissue - Create a new work item"; \
+		echo "  make nimsforestwork-lint     - Validate work items"; \
+	else \
+		echo "🔧 Integration needed:"; \
+		echo "  1. make -f MAKEFILE.nimsforestwork nimsforestwork-addtomainmakefile"; \
+		echo "  2. make nimsforestwork-init"; \
+		echo "  3. make nimsforestwork-newissue"; \
+	fi
 
 # Initialize work folder structure
 nimsforestwork-init:
@@ -179,32 +276,29 @@ nimsforestwork-addtomainmakefile:
 	@echo "🌲 Adding NimsforestWork to main Makefile..."
 	@echo "============================================="
 	@echo ""
-	@if [ -z "$(PROJECTDIR)" ]; then \
-		echo "❌ PROJECTDIR environment variable not set"; \
-		echo "Usage: make nimsforestwork-addtomainmakefile PROJECTDIR=/path/to/project"; \
+	@# Use current directory if PROJECTDIR not set
+	@PROJECTDIR_TO_USE=$${PROJECTDIR:-$(PWD)}; \
+	if [ ! -f "$$PROJECTDIR_TO_USE/Makefile" ]; then \
+		echo "❌ Makefile not found at $$PROJECTDIR_TO_USE/Makefile"; \
 		exit 1; \
-	fi
-	@if [ ! -f "$(PROJECTDIR)/Makefile" ]; then \
-		echo "❌ Makefile not found at $(PROJECTDIR)/Makefile"; \
-		exit 1; \
-	fi
-	@echo "📁 Project directory: $(PROJECTDIR)"
-	@echo "📝 Checking if already included..."
-	@if grep -q "pkg/nimsforestwork/MAKEFILE.nimsforestwork" "$(PROJECTDIR)/Makefile"; then \
+	fi; \
+	echo "📁 Project directory: $$PROJECTDIR_TO_USE"; \
+	echo "📝 Checking if already included..."; \
+	if grep -q "MAKEFILE.nimsforestwork" "$$PROJECTDIR_TO_USE/Makefile"; then \
 		echo "ℹ️  NimsforestWork already included in main Makefile"; \
 	else \
-		echo "" >> "$(PROJECTDIR)/Makefile"; \
-		echo "# Include NimsforestWork commands" >> "$(PROJECTDIR)/Makefile"; \
-		echo "-include pkg/nimsforestwork/MAKEFILE.nimsforestwork" >> "$(PROJECTDIR)/Makefile"; \
+		echo "" >> "$$PROJECTDIR_TO_USE/Makefile"; \
+		echo "# Include NimsforestWork commands" >> "$$PROJECTDIR_TO_USE/Makefile"; \
+		echo "-include MAKEFILE.nimsforestwork" >> "$$PROJECTDIR_TO_USE/Makefile"; \
 		echo "✅ Added NimsforestWork include to main Makefile"; \
-	fi
-	@echo ""
-	@echo "🎉 NimsforestWork integration complete!"
-	@echo ""
-	@echo "Available commands:"
-	@echo "  make nimsforestwork-hello  - Check system compatibility"
-	@echo "  make nimsforestwork-init   - Initialize work structure"
-	@echo "  make nimsforestwork-lint   - Validate work items"
+	fi; \
+	echo ""; \
+	echo "🎉 NimsforestWork integration complete!"; \
+	echo ""; \
+	echo "Available commands:"; \
+	echo "  make nimsforestwork-hello  - Check system compatibility"; \
+	echo "  make nimsforestwork-init   - Initialize work structure"; \
+	echo "  make nimsforestwork-lint   - Validate work items"
 
 # Remove this Makefile from the main project Makefile
 nimsforestwork-removefromainmakefile:

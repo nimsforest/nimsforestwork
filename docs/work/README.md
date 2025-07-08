@@ -1,4 +1,4 @@
-# NimsforestWork - Nim-Based Work Management System
+# NimsforestWork - AI-Powered Work Management System
 
 [![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](#)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -6,23 +6,7 @@
 [![Dependencies](https://img.shields.io/badge/dependencies-git%20|%20make-green.svg)](#)
 [![Tests](https://github.com/nimsforest/nimsforestwork/workflows/Test%20NimsforestWork/badge.svg)](https://github.com/nimsforest/nimsforestwork/actions)
 
-A work management system designed for **Nim-based development** - where Nims (entities with agency) collaborate across distributed teams. Essential for environments where humans, AI agents, robots, and drones work together on complex tasks.
-
-## 🤝 The Nim Way of Working
-
-**What is a Nim?** An entity with agency, having MECE (Mutually Exclusive, Collectively Exhaustive) roles and responsibilities within an organization - regardless of whether executed by humans, AI agents, robots, or drones.
-
-### Why Git Worktrees for Distributed Nims?
-
-In distributed teams, a single task often requires:
-- **Human Nims**: Strategic decisions, approvals, complex problem-solving
-- **AI Agent Nims**: Code generation, documentation, testing automation  
-- **Robot/Drone Nims**: Physical deployment, hardware integration
-- **Mixed collaboration**: Some parts automated, others requiring human oversight
-
-**The Challenge**: These different Nims work at different speeds and may take days or weeks to complete their parts of a task before it can merge to main.
-
-**The Solution**: Git worktrees create isolated workspaces where multiple Nims can collaborate on long-running features without blocking each other or the main branch.
+A self-contained work management system designed for developers and AI agents. Provides deterministic work item lifecycle management with Netflix-style deployment philosophy.
 
 ## 🚀 Quick Setup: Transform Any Repo into a Git Worktree Workspace
 
@@ -69,55 +53,22 @@ cd /home/user/justanothertodoapp-workspace
 └── Makefile                                 # Workspace commands
 ```
 
-### 🌳 Ready for Distributed Nim Collaboration
+### 🌳 Ready for Git Worktrees
 
 ```bash
-# Create feature branches as separate directories for different Nims
+# Create feature branches as separate directories
 cd /home/user/justanothertodoapp-workspace/main
-git worktree add ../feature-auth feature-auth        # New branch for feature work
-git worktree add ../bug-fix-login origin/bug-fix     # Existing branch for bug fixes
+git worktree add ../feature-auth origin/feature-auth
+git worktree add ../bug-fix-login origin/bug-fix-login
 
-# Your workspace now supports parallel Nim work:
+# Your workspace now looks like:
 # justanothertodoapp-workspace/
-# ├── main/              # main branch (stable)
-# ├── feature-auth/      # Human Nim: UX design + AI Nim: implementation
-# ├── bug-fix-login/     # AI Nim: automated testing + Human Nim: verification
-# ├── work/              # shared work management across all Nims
+# ├── main/              # main branch
+# ├── feature-auth/      # feature branch
+# ├── bug-fix-login/     # bug fix branch
+# ├── work/              # shared work management
 # └── tools/             # shared tools
 ```
-
-### 🎯 Real-World Nim Workflow Example
-
-**Scenario**: Adding user authentication feature
-
-1. **Issue Creation** (Any Nim):
-   ```bash
-   make nimsforestwork-newissue TITLE=userauthentication MESSAGE="Add OAuth and 2FA support"
-   ```
-
-2. **Feature Branch Setup** (Human Nim):
-   ```bash
-   cd main && git worktree add ../feature-auth feature-auth
-   git mv docs/work/issues/new/userauthentication.md docs/work/newfeatures/next/
-   ```
-
-3. **Parallel Development** (Multiple Nims):
-   - **AI Agent Nim** in `feature-auth/`: Generates OAuth integration code
-   - **Human Nim** remotely: Reviews security implications, defines UX flows
-   - **Another AI Agent** in `feature-auth/`: Writes comprehensive tests
-   - **Human Nim** later: Final security audit and approval
-
-4. **Long-Running Collaboration**: The feature branch can exist for weeks while different Nims contribute at their own pace, without blocking main branch development.
-
-5. **Integration**: Only when ALL Nims complete their parts does the feature merge to main and go to production.
-
-### 💡 Why This Matters for Distributed Teams
-
-- **Asynchronous Collaboration**: Nims work when available, not in lockstep
-- **Isolation**: No blocking or conflicts between different Nim workstreams  
-- **Context Preservation**: Each feature branch maintains its complete development context
-- **Quality Gates**: Features only merge when truly complete
-- **Local Development**: Even distributed teams benefit from local worktree organization
 
 ## 📝 WORKSPACE_ROOT Explained
 
@@ -177,37 +128,30 @@ make nimsforestwork-init
 - `make nimsforestwork-newissue` - Create new work item interactively
 - `make nimsforestwork-lint` - Validate all work items
 
-## Nim Integration
+## AI Agent Integration
 
-### For Human Nims Working with AI Agent Nims
+### For Developers Using AI Tools
 
 Simply tell your AI agent:
 
 ```
-Please read NIMINSTRUCTIONS.md and follow those instructions for all development work.
+Please read pkg/nimsforestwork/AGENTINSTRUCTIONS.md and follow those instructions for all development work.
 ```
 
-The AI agent Nim will then automatically:
+The AI agent will then automatically:
 - Create work items before starting any development
-- Move work items through proper workflow states using git mv commands
-- Follow the enterprise development lifecycle
+- Move work items through proper workflow states  
+- Follow the Netflix deployment model
 - Document the "why" behind every change
 
-### Supported AI Agent Nims
+### Supported AI Tools
 
 This works with any AI coding assistant:
-- **Claude Code** - `"Read NIMINSTRUCTIONS.md and follow those instructions"`
+- **Claude Code** - `"Read pkg/nimsforestwork/AGENTINSTRUCTIONS.md and follow those instructions"`
 - **Cursor** - Same instruction in system prompt
 - **GitHub Copilot** - Include instruction in comments
 - **Gemini CLI** - Pass instruction as context
 - **Any AI tool** - The instructions are self-contained
-
-### Human Nim Workflow
-
-Human Nims can also follow the same process:
-1. Read NIMINSTRUCTIONS.md for complete workflow guidance
-2. Use git mv commands to move work items between states
-3. Collaborate with AI Agent Nims using shared work items
 
 ## Work Item System
 
