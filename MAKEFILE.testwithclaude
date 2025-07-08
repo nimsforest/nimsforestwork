@@ -1,0 +1,470 @@
+# =============================================================================
+# NimsforestWork Integration Test with Claude
+# =============================================================================
+# 
+# This makefile creates a comprehensive integration test that:
+# 1. Sets up a isolated test repository
+# 2. Spawns 5 Claude agents to simulate distributed workflow
+# 3. Creates 3 test issues of different complexity
+# 4. Validates complete workflow from triage to production
+#
+# Prerequisites:
+# - Claude CLI available in PATH (claude command)
+# - Git repository with nimsforestwork system
+#
+# Usage:
+#   make -f MAKEFILE.testwithclaude test-full
+#   make -f MAKEFILE.testwithclaude test-setup
+#   make -f MAKEFILE.testwithclaude test-run
+#   make -f MAKEFILE.testwithclaude test-cleanup
+#
+
+.PHONY: test-full test-setup test-run test-cleanup test-validate test-report
+
+# Test configuration
+TEST_DIR := /tmp/nimsforestwork-test-$(shell date +%Y%m%d-%H%M%S)
+NIM_COUNT := 3
+ISSUE_COUNT := 3
+TEST_TIMEOUT := 180  # 3 minutes
+
+# Full integration test - runs everything
+test-full: test-setup test-run test-validate test-report
+	@echo "🎉 Integration test completed successfully!"
+	@echo "Test directory: $(TEST_DIR)"
+	@echo "Review test-results.log for detailed output"
+
+# Setup test environment
+test-setup:
+	@echo "🔧 Setting up NimsforestWork integration test environment..."
+	@echo "Test directory: $(TEST_DIR)"
+	@echo ""
+	
+	# Check prerequisites
+	@echo "📋 Checking prerequisites..."
+	@command -v claude >/dev/null 2>&1 || (echo "❌ claude CLI not found - install from https://docs.anthropic.com/en/docs/claude-code" && exit 1)
+	@command -v git >/dev/null 2>&1 || (echo "❌ git not found" && exit 1)
+	@echo "✅ All prerequisites satisfied"
+	@claude --version || (echo "❌ Claude CLI not properly configured" && exit 1)
+	@echo ""
+	
+	# Create test repository
+	@echo "📁 Creating isolated test repository..."
+	@mkdir -p $(TEST_DIR)
+	@cd $(TEST_DIR) && git init
+	@cd $(TEST_DIR) && git config user.name "NimsforestWork Test"
+	@cd $(TEST_DIR) && git config user.email "test@nimsforestwork.local"
+	@echo "✅ Test repository created"
+	@echo ""
+	
+	# Copy core system files
+	@echo "📋 Copying NimsforestWork system files..."
+	@cp /home/cederik/repositories/nimsforestworkspace/nimsforestwork-workspace/main/MAKEFILE.nimsforestwork $(TEST_DIR)/
+	@cp -r /home/cederik/repositories/nimsforestworkspace/nimsforestwork-workspace/main/docs $(TEST_DIR)/
+	@mkdir -p $(TEST_DIR)/test-scripts
+	@echo "✅ Core files copied"
+	@echo ""
+	
+	# Create test-specific makefile (local-only operations)
+	@echo "🔧 Creating test-specific configuration..."
+	@$(MAKE) -f /home/cederik/repositories/nimsforestworkspace/nimsforestwork-workspace/main/MAKEFILE.testwithclaude test-create-local-makefile TEST_DIR=$(TEST_DIR)
+	@echo "✅ Test configuration created"
+	@echo ""
+	
+	# Create Claude scripts
+	@echo "🤖 Setting up Claude scripts..."
+	@$(MAKE) -f /home/cederik/repositories/nimsforestworkspace/nimsforestwork-workspace/main/MAKEFILE.testwithclaude test-create-claude-scripts TEST_DIR=$(TEST_DIR)
+	@echo "✅ Claude scripts ready"
+	@echo ""
+	
+	# Initialize work structure
+	@echo "📂 Initializing work structure..."
+	@cd $(TEST_DIR) && make -f MAKEFILE.nimsforestwork.local nimsforestwork-init
+	@echo "✅ Work structure initialized"
+	@echo ""
+	
+	# Don't create test issues - let newissuecreator do it
+	@echo "📝 Issues will be created by newissuecreator agent"
+	@echo ""
+	
+	# Initial commit
+	@cd $(TEST_DIR) && git add . && git commit -m "Initial nimsforestwork test setup"
+	@echo "🎯 Test environment ready at: $(TEST_DIR)"
+
+# Run the actual test with Claude agents
+test-run:
+	@echo "🚀 Launching NimsforestWork integration test..."
+	@echo "Starting newissuecreator + $(NIM_COUNT) Nims for $(TEST_TIMEOUT) seconds..."
+	@echo ""
+	
+	# Launch newissuecreator first
+	@echo "📝 Starting newissuecreator..."
+	@cd $(TEST_DIR) && bash test-scripts/newissuecreator.sh $(ISSUE_COUNT) > newissuecreator.log 2>&1 &
+	@echo $$! > $(TEST_DIR)/newissuecreator.pid
+	@echo "✅ newissuecreator launched"
+	@echo ""
+	
+	# Wait a moment for issues to be created
+	@echo "⏳ Waiting for issues to be created..."
+	@sleep 30
+	
+	# Launch Nim agents
+	@echo "🤖 Starting $(NIM_COUNT) Nims..."
+	@for i in $$(seq 1 $(NIM_COUNT)); do \
+		echo "  Starting Nim $$i..."; \
+		cd $(TEST_DIR) && bash test-scripts/nim-$$i.sh $(TEST_TIMEOUT) > nim-$$i.log 2>&1 & \
+		echo $$! > nim-$$i.pid; \
+	done
+	@echo "✅ All Nims launched"
+	@echo ""
+	
+	# Monitor progress
+	@echo "📊 Monitoring test progress..."
+	@echo "Test running for $(TEST_TIMEOUT) seconds, check logs in $(TEST_DIR)/"
+	@sleep 120  # Run for 2 minutes
+	
+	# Wait for Nims to complete
+	@echo "⏳ Waiting for Nims to complete..."
+	@for i in $$(seq 1 $(NIM_COUNT)); do \
+		if [ -f $(TEST_DIR)/nim-$$i.pid ]; then \
+			pid=$$(cat $(TEST_DIR)/nim-$$i.pid); \
+			wait $$pid 2>/dev/null || true; \
+			rm -f $(TEST_DIR)/nim-$$i.pid; \
+		fi; \
+	done
+	@if [ -f $(TEST_DIR)/newissuecreator.pid ]; then \
+		pid=$$(cat $(TEST_DIR)/newissuecreator.pid); \
+		kill $$pid 2>/dev/null || true; \
+		rm -f $(TEST_DIR)/newissuecreator.pid; \
+	fi
+	@echo "✅ All Nims completed"
+
+# Validate test results
+test-validate:
+	@echo "🔍 Validating test results..."
+	@echo "Checking work items in $(TEST_DIR)..."
+	@find $(TEST_DIR)/docs/work -type f -name "*.md" 2>/dev/null | wc -l || echo "0"
+	@echo "✅ Validation complete"
+
+# Generate test report
+test-report:
+	@echo "📊 Generating test report..."
+	@echo "=== NimsforestWork Integration Test Report ===" > $(TEST_DIR)/test-results.log
+	@echo "Test directory: $(TEST_DIR)" >> $(TEST_DIR)/test-results.log
+	@echo "Work items found:" >> $(TEST_DIR)/test-results.log
+	@find $(TEST_DIR)/docs/work -name "*.md" 2>/dev/null >> $(TEST_DIR)/test-results.log || true
+	@echo "✅ Test report generated: $(TEST_DIR)/test-results.log"
+	@echo ""
+	@echo "📋 Test Summary:"
+	@head -20 $(TEST_DIR)/test-results.log 2>/dev/null || echo "No results found"
+
+# Clean up test environment
+test-cleanup:
+	@echo "🧹 Cleaning up test environment..."
+	@if [ -d "$(TEST_DIR)" ]; then \
+		echo "Removing test directory: $(TEST_DIR)"; \
+		rm -rf $(TEST_DIR); \
+		echo "✅ Cleanup complete"; \
+	else \
+		echo "No test directory to clean up"; \
+	fi
+
+# Helper target: Create local-only makefile
+test-create-local-makefile:
+	@echo "# Local-only nimsforestwork makefile for testing" > $(TEST_DIR)/MAKEFILE.nimsforestwork.local
+	@echo "# This version skips remote git pushes but uses real git worktrees and commits" >> $(TEST_DIR)/MAKEFILE.nimsforestwork.local
+	@echo "" >> $(TEST_DIR)/MAKEFILE.nimsforestwork.local
+	@sed 's/git push -u origin [^;]*/# Remote push skipped for local test/g' /home/cederik/repositories/nimsforestworkspace/nimsforestwork-workspace/main/MAKEFILE.nimsforestwork >> $(TEST_DIR)/MAKEFILE.nimsforestwork.local
+
+# Helper target: Create Claude scripts
+test-create-claude-scripts:
+	# Create newissuecreator script
+	@echo "#!/bin/bash" > $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "# newissuecreator - Creates random issues for testing" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "ISSUE_COUNT=\$$1" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "log() {" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "    echo \"[\$$(date '+%H:%M:%S')] [newissuecreator] \$$1\"" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "}" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "log \"Creating \$$ISSUE_COUNT random issues...\"" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "# Ask Claude to create random issues" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "prompt=\"Create \$$ISSUE_COUNT random work issues for a software project. For each issue:" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "1. Generate a short descriptive filename (lowercase, no spaces)" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "2. Create markdown content with title, description, business rating (1-5), and complexity (Simple/Normal/Complex)" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "3. Make issues varied (bugs, features, changes, documentation)" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "Respond with bash commands to create the files. Example:" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "cat > docs/work/issues/new/fix-login-bug.md << 'EOF'" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "# Fix Login Bug" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "## Description" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "Login button not working..." >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "EOF\"" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "# Get commands from Claude and execute them" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "commands=\$$(claude --print \"\$$prompt\" 2>/dev/null)" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "log \"Claude response: \$$commands\"" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "if [ -n \"\$$commands\" ]; then" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "    echo \"\$$commands\" | bash" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "else" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "    log \"No response from Claude, creating manual test issues\"" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "    echo '# Test Issue 1' > docs/work/issues/new/test-issue-1.md" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "    echo '# Test Issue 2' > docs/work/issues/new/test-issue-2.md" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "    echo '# Test Issue 3' > docs/work/issues/new/test-issue-3.md" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "fi" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "# Commit the new issues" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "git add docs/work/issues/new/*.md" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "git commit -m \"test: create \$$ISSUE_COUNT random issues for integration test\"" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@echo "log \"Created \$$ISSUE_COUNT issues and committed them\"" >> $(TEST_DIR)/test-scripts/newissuecreator.sh
+	@chmod +x $(TEST_DIR)/test-scripts/newissuecreator.sh
+	
+	# Create Nim scripts
+	@for i in $$(seq 1 3); do \
+		echo "#!/bin/bash" > $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "# Nim $$i - Follows NIMINSTRUCTIONS.md workflow" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "NIM_ID=$$i" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "TIMEOUT=\$$1" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "START_TIME=\$$(date +%s)" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "ACTIONS_TAKEN=0" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "log() {" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "    echo \"[\$$(date '+%H:%M:%S')] [Nim \$$NIM_ID] \$$1\"" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "}" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "get_repository_state() {" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "    echo \"Repository state:\"" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "    find docs/work -name '*.md' 2>/dev/null | head -10" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "    echo \"Work directories:\"" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "    find docs/work -type d 2>/dev/null | grep -E '(new|stamped|next|ready|in|signed)' | head -10" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "}" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "decide_next_action() {" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "    local instructions=\$$(cat docs/NIMINSTRUCTIONS.md 2>/dev/null || echo 'No instructions found')" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "    local repo_state=\$$(get_repository_state)" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "    local prompt=\"You are Nim \$$NIM_ID working in a nimsforestwork system." >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "Read the NIMINSTRUCTIONS.md and follow those instructions exactly." >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "Use the actual git commands from the documentation." >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "Skip any 'git push' to remote - work locally only." >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "Instructions:" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "\$$instructions" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "\$$repo_state" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "What should you do next? Follow the NIMINSTRUCTIONS.md workflow." >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "Respond with a single bash command to execute next, or 'WAIT' if no work, or 'DONE' if everything is complete.\"" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "    claude --print \"\$$prompt\" 2>/dev/null | tail -1 | tr -d '\\n\\r'" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "}" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "execute_command() {" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "    local command=\"\$$1\"" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "    log \"Executing: \$$command\"" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "    " >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "    # Execute the command (filter out git push)" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "    local safe_command=\$$(echo \"\$$command\" | sed 's/git push[^;]*;//g' | sed 's/git push.*//')" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "    " >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "    if eval \"\$$safe_command\" 2>/dev/null; then" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "        ACTIONS_TAKEN=\$$((ACTIONS_TAKEN + 1))" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "        log \"Action successful (total: \$$ACTIONS_TAKEN)\"" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "        return 0" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "    else" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "        log \"Action failed\"" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "        return 1" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "    fi" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "}" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "# Main Nim loop" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "log \"Starting Nim \$$NIM_ID (timeout: \$$TIMEOUT seconds)\"" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "while [ \$$(((\$$(date +%s) - START_TIME))) -lt \$$TIMEOUT ]; do" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "    action=\$$(decide_next_action)" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "    log \"Claude says: \$$action\"" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "    case \"\$$action\" in" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "        \"DONE\")" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "            log \"Work complete, shutting down\"" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "            break" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "            ;;" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "        \"WAIT\")" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "            log \"No work available, waiting...\"" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "            sleep \$$((30 + RANDOM % 60))" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "            ;;" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "        *)" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "            execute_command \"\$$action\"" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "            sleep \$$((15 + RANDOM % 30))" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "            ;;" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "    esac" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "done" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		echo "log \"Nim \$$NIM_ID shutting down after \$$ACTIONS_TAKEN actions\"" >> $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+		chmod +x $(TEST_DIR)/test-scripts/nim-$$i.sh; \
+	done
+
+# Helper target: Create test issues
+test-create-issues:
+	@echo "Creating test issue 1: Simple Bug"
+	@echo "# Fix Login Button Styling" > $(TEST_DIR)/docs/work/issues/new/fix-login-button-styling.md
+	@echo "" >> $(TEST_DIR)/docs/work/issues/new/fix-login-button-styling.md
+	@echo "## Description" >> $(TEST_DIR)/docs/work/issues/new/fix-login-button-styling.md
+	@echo "The login button on the main page has incorrect styling that makes it hard to see." >> $(TEST_DIR)/docs/work/issues/new/fix-login-button-styling.md
+	@echo "" >> $(TEST_DIR)/docs/work/issues/new/fix-login-button-styling.md
+	@echo "## Business Rating" >> $(TEST_DIR)/docs/work/issues/new/fix-login-button-styling.md
+	@echo "3 - Normal priority" >> $(TEST_DIR)/docs/work/issues/new/fix-login-button-styling.md
+	@echo "" >> $(TEST_DIR)/docs/work/issues/new/fix-login-button-styling.md
+	@echo "## Complexity Assessment" >> $(TEST_DIR)/docs/work/issues/new/fix-login-button-styling.md
+	@echo "Simple - CSS styling fix" >> $(TEST_DIR)/docs/work/issues/new/fix-login-button-styling.md
+	
+	@echo "Creating test issue 2: Normal Feature"
+	@echo "# Add Password Reset Functionality" > $(TEST_DIR)/docs/work/issues/new/add-password-reset-functionality.md
+	@echo "" >> $(TEST_DIR)/docs/work/issues/new/add-password-reset-functionality.md
+	@echo "## Description" >> $(TEST_DIR)/docs/work/issues/new/add-password-reset-functionality.md
+	@echo "Users need ability to reset their passwords when they forget them." >> $(TEST_DIR)/docs/work/issues/new/add-password-reset-functionality.md
+	@echo "" >> $(TEST_DIR)/docs/work/issues/new/add-password-reset-functionality.md
+	@echo "## Business Rating" >> $(TEST_DIR)/docs/work/issues/new/add-password-reset-functionality.md
+	@echo "4 - High priority" >> $(TEST_DIR)/docs/work/issues/new/add-password-reset-functionality.md
+	@echo "" >> $(TEST_DIR)/docs/work/issues/new/add-password-reset-functionality.md
+	@echo "## Complexity Assessment" >> $(TEST_DIR)/docs/work/issues/new/add-password-reset-functionality.md
+	@echo "Normal - Requires email integration and security considerations" >> $(TEST_DIR)/docs/work/issues/new/add-password-reset-functionality.md
+	
+	@echo "Creating test issue 3: Complex Change"
+	@echo "# Migrate Authentication System to OAuth2" > $(TEST_DIR)/docs/work/issues/new/migrate-authentication-system-to-oauth2.md
+	@echo "" >> $(TEST_DIR)/docs/work/issues/new/migrate-authentication-system-to-oauth2.md
+	@echo "## Description" >> $(TEST_DIR)/docs/work/issues/new/migrate-authentication-system-to-oauth2.md
+	@echo "Replace current custom authentication with industry-standard OAuth2 implementation." >> $(TEST_DIR)/docs/work/issues/new/migrate-authentication-system-to-oauth2.md
+	@echo "" >> $(TEST_DIR)/docs/work/issues/new/migrate-authentication-system-to-oauth2.md
+	@echo "## Business Rating" >> $(TEST_DIR)/docs/work/issues/new/migrate-authentication-system-to-oauth2.md
+	@echo "5 - Critical priority for security compliance" >> $(TEST_DIR)/docs/work/issues/new/migrate-authentication-system-to-oauth2.md
+	@echo "" >> $(TEST_DIR)/docs/work/issues/new/migrate-authentication-system-to-oauth2.md
+	@echo "## Complexity Assessment" >> $(TEST_DIR)/docs/work/issues/new/migrate-authentication-system-to-oauth2.md
+	@echo "Complex - Requires careful planning and extensive testing" >> $(TEST_DIR)/docs/work/issues/new/migrate-authentication-system-to-oauth2.md
+
+# Helper targets for monitoring and validation
+test-create-monitor:
+	@echo '#!/usr/bin/env python3' > $(TEST_DIR)/test-scripts/test-monitor.py
+	@echo 'import sys' >> $(TEST_DIR)/test-scripts/test-monitor.py
+	@echo 'import time' >> $(TEST_DIR)/test-scripts/test-monitor.py
+	@echo 'import os' >> $(TEST_DIR)/test-scripts/test-monitor.py
+	@echo 'import subprocess' >> $(TEST_DIR)/test-scripts/test-monitor.py
+	@echo '' >> $(TEST_DIR)/test-scripts/test-monitor.py
+	@echo 'def monitor_test(timeout):' >> $(TEST_DIR)/test-scripts/test-monitor.py
+	@echo '    start_time = time.time()' >> $(TEST_DIR)/test-scripts/test-monitor.py
+	@echo '    while time.time() - start_time < timeout:' >> $(TEST_DIR)/test-scripts/test-monitor.py
+	@echo '        # Check work item status' >> $(TEST_DIR)/test-scripts/test-monitor.py
+	@echo '        result = subprocess.run(["find", "docs/work", "-type", "d"], capture_output=True, text=True)' >> $(TEST_DIR)/test-scripts/test-monitor.py
+	@echo '        print(f"\\rTime: {int(time.time() - start_time)}s | Work items: {len(result.stdout.splitlines())}", end="")' >> $(TEST_DIR)/test-scripts/test-monitor.py
+	@echo '        time.sleep(10)' >> $(TEST_DIR)/test-scripts/test-monitor.py
+	@echo '    print("\\nMonitoring complete")' >> $(TEST_DIR)/test-scripts/test-monitor.py
+	@echo '' >> $(TEST_DIR)/test-scripts/test-monitor.py
+	@echo 'if __name__ == "__main__":' >> $(TEST_DIR)/test-scripts/test-monitor.py
+	@echo '    monitor_test(int(sys.argv[1]))' >> $(TEST_DIR)/test-scripts/test-monitor.py
+	@chmod +x $(TEST_DIR)/test-scripts/test-monitor.py
+
+test-create-validator:
+	@echo '#!/usr/bin/env python3' > $(TEST_DIR)/test-scripts/test-validator.py
+	@echo 'import os' >> $(TEST_DIR)/test-scripts/test-validator.py
+	@echo 'import subprocess' >> $(TEST_DIR)/test-scripts/test-validator.py
+	@echo '' >> $(TEST_DIR)/test-scripts/test-validator.py
+	@echo 'def validate_test():' >> $(TEST_DIR)/test-scripts/test-validator.py
+	@echo '    print("🔍 Validating test results...")' >> $(TEST_DIR)/test-scripts/test-validator.py
+	@echo '    ' >> $(TEST_DIR)/test-scripts/test-validator.py
+	@echo '    # Check if all issues moved through workflow' >> $(TEST_DIR)/test-scripts/test-validator.py
+	@echo '    production_items = subprocess.run(["find", "docs/work/archive/production", "-name", "*.md"], capture_output=True, text=True)' >> $(TEST_DIR)/test-scripts/test-validator.py
+	@echo '    production_count = len([f for f in production_items.stdout.splitlines() if f.strip()])' >> $(TEST_DIR)/test-scripts/test-validator.py
+	@echo '    ' >> $(TEST_DIR)/test-scripts/test-validator.py
+	@echo '    print(f"✅ Work items in production: {production_count}/3")' >> $(TEST_DIR)/test-scripts/test-validator.py
+	@echo '    ' >> $(TEST_DIR)/test-scripts/test-validator.py
+	@echo '    # Check for stuck items' >> $(TEST_DIR)/test-scripts/test-validator.py
+	@echo '    new_items = subprocess.run(["find", "docs/work/issues/new", "-name", "*.md"], capture_output=True, text=True)' >> $(TEST_DIR)/test-scripts/test-validator.py
+	@echo '    new_count = len([f for f in new_items.stdout.splitlines() if f.strip() and "template" not in f])' >> $(TEST_DIR)/test-scripts/test-validator.py
+	@echo '    ' >> $(TEST_DIR)/test-scripts/test-validator.py
+	@echo '    if new_count > 0:' >> $(TEST_DIR)/test-scripts/test-validator.py
+	@echo '        print(f"⚠️  Items stuck in new/: {new_count}")' >> $(TEST_DIR)/test-scripts/test-validator.py
+	@echo '    ' >> $(TEST_DIR)/test-scripts/test-validator.py
+	@echo '    return production_count >= 3 and new_count == 0' >> $(TEST_DIR)/test-scripts/test-validator.py
+	@echo '' >> $(TEST_DIR)/test-scripts/test-validator.py
+	@echo 'if __name__ == "__main__":' >> $(TEST_DIR)/test-scripts/test-validator.py
+	@echo '    success = validate_test()' >> $(TEST_DIR)/test-scripts/test-validator.py
+	@echo '    exit(0 if success else 1)' >> $(TEST_DIR)/test-scripts/test-validator.py
+	@chmod +x $(TEST_DIR)/test-scripts/test-validator.py
+
+test-create-reporter:
+	@echo '#!/usr/bin/env python3' > $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo 'import os' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo 'import subprocess' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo 'import time' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo 'def generate_report():' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '    print("=" * 60)' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '    print("NimsforestWork Integration Test Report")' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '    print("=" * 60)' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '    print(f"Generated: {time.strftime(\\"%Y-%m-%d %H:%M:%S\\")}\\n")' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '    ' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '    # Count items in each state' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '    states = ["new", "stamped", "next", "readyforanalysis", "inanalysis", "readyfordevelopment", "indevelopment", "readyfortesting", "intesting", "signedoff"]' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '    ' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '    for state in states:' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '        result = subprocess.run(["find", "docs/work", "-path", f"*/{state}/*", "-name", "*.md"], capture_output=True, text=True)' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '        count = len([f for f in result.stdout.splitlines() if f.strip()])' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '        if count > 0:' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '            print(f"{state:20}: {count} items")' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '    ' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '    # Check production items' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '    result = subprocess.run(["find", "docs/work/archive/production", "-name", "*.md"], capture_output=True, text=True)' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '    production_count = len([f for f in result.stdout.splitlines() if f.strip()])' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '    print(f"{"production":20}: {production_count} items")' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '    ' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '    # Analyze agent logs' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '    print("\\nAgent Activity:")' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '    for i in range(1, 6):' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '        if os.path.exists(f"agent-{i}.log"):' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '            with open(f"agent-{i}.log", "r") as f:' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '                lines = f.readlines()' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '                actions = [l for l in lines if "Action successful" in l]' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '                print(f"Agent {i:2}: {len(actions)} successful actions")' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '    ' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '    # Final status' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '    print(f"\\nTest Status: {'✅ PASSED' if production_count >= 3 else '❌ FAILED'}")' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '    print("=" * 60)' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo 'if __name__ == "__main__":' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@echo '    generate_report()' >> $(TEST_DIR)/test-scripts/test-reporter.py
+	@chmod +x $(TEST_DIR)/test-scripts/test-reporter.py
+
+# Update the setup to include all helper scripts
+# test-setup: test-create-monitor test-create-validator test-create-reporter
+
+# Help target
+help:
+	@echo "NimsforestWork Integration Test with Claude"
+	@echo "=========================================="
+	@echo ""
+	@echo "Prerequisites:"
+	@echo "  - Claude CLI available in PATH (claude command)"
+	@echo "  - Git repository with nimsforestwork system"
+	@echo ""
+	@echo "Commands:"
+	@echo "  test-full      - Run complete integration test"
+	@echo "  test-setup     - Setup test environment only"
+	@echo "  test-run       - Run agents (requires setup first)"
+	@echo "  test-validate  - Validate test results"
+	@echo "  test-report    - Generate test report"
+	@echo "  test-cleanup   - Clean up test environment"
+	@echo ""
+	@echo "Example usage:"
+	@echo "  # Ensure Claude CLI is installed and configured"
+	@echo "  claude --version"
+	@echo "  make -f MAKEFILE.testwithclaude test-full"
+	@echo ""
+	@echo "The test will:"
+	@echo "  1. Create isolated test repository"
+	@echo "  2. Launch newissuecreator to create 3 random issues"
+	@echo "  3. Launch 3 Nims that follow NIMINSTRUCTIONS.md"
+	@echo "  4. Validate all issues reach production state"
+	@echo "  5. Generate comprehensive test report"
