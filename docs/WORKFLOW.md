@@ -1,16 +1,16 @@
 # NimsforestWork Workflow Documentation
 
-A practical but thorough guide on how to manage a software product and development team using **distributed git-based coordination**. The focus is to be as agile as possible while ensuring quality through **branch-based distributed locking** and **folder-based state tracking**.
+A practical but thorough guide on how to manage any type of work using **distributed git-based coordination**. The focus is to be as agile as possible while ensuring quality through **branch-based distributed locking** and **folder-based state tracking**.
 
 This document provides a high-level overview of the complete workflow. For detailed implementation, see:
 - **[TRIAGE.md](TRIAGE.md)** - Triage process and stamping workflow
 - **[DISTRIBUTEDLOCKING.md](DISTRIBUTEDLOCKING.md)** - Branch-based distributed locking mechanism
 
-This document covers all aspects from input (new things to make) to production (how to make quality items while staying nimble) to output (releasing new quality versions).
+This document covers all aspects from input (new things to make) to production (how to make quality items while staying nimble) to output (releasing new quality versions). The system applies to any type of work - software, hardware, documentation, research, or even atomic-level processes.
 
 ## Overview
 
-NimsforestWork implements a **distributed, git-native** issue management and product development workflow that supports the complete lifecycle from initial customer contact to production delivery. The system uses **branch-based distributed locking** to coordinate thousands of concurrent developers without requiring central coordination infrastructure.
+NimsforestWork implements a **distributed, git-native** issue management and work coordination workflow that supports the complete lifecycle from initial request to production delivery. The system uses **branch-based distributed locking** to coordinate thousands of concurrent workers without requiring central coordination infrastructure.
 
 ## Work Structure
 
@@ -74,12 +74,12 @@ All methods feed into the **triage process** for UUID stamping and categorizatio
 
 ### Work Item Types
 
-- **bugs/**: Fix broken functionality
-- **changerequests/**: Modify existing functionality  
-- **newfeatures/**: Add new functionality
-- **improvedocumentation/**: Improve documentation
+- **bugs/**: Fix broken functionality (any domain)
+- **changerequests/**: Modify existing functionality (any domain)
+- **newfeatures/**: Add new functionality (any domain)
+- **improvedocumentation/**: Improve documentation (any domain)
 
-Each type follows the same workflow states after categorization.
+Each type follows the same workflow states after categorization. The system applies universally - whether the work involves code, hardware, processes, or even atomic-level operations.
 
 ## Production Phase: Making Quality Items While Staying Nimble
 
@@ -87,7 +87,7 @@ Each type follows the same workflow states after categorization.
 
 The production phase uses **branch-based distributed locking** with **git worktrees** for coordination. This enables:
 
-- **Thousands of concurrent developers** working without central coordination
+- **Thousands of concurrent workers** working without central coordination
 - **Git worktrees** for same-machine concurrent agents
 - **Branch-based claiming** prevents work conflicts
 - **Folder-based state tracking** through filesystem
@@ -231,7 +231,7 @@ Quality gates are enforced through work item folder content - missing required a
 
 ### Enterprise Scale Coordination
 
-- **Thousands of concurrent developers** supported
+- **Thousands of concurrent workers** supported
 - **Zero infrastructure** requirements beyond git
 - **Same-machine concurrency** via git worktrees  
 - **Perfect fault tolerance** through distributed design
@@ -244,4 +244,4 @@ For implementation details, see:
 - **[DISTRIBUTEDLOCKING.md](DISTRIBUTEDLOCKING.md)**: Branch-based distributed locking mechanism
 - **[NIMINSTRUCTIONS.md](NIMINSTRUCTIONS.md)**: Agent-specific implementation instructions
 
-This workflow ensures systematic handling of all work types while maintaining quality and agility at enterprise scale through pure git-based distributed coordination.
+This workflow ensures systematic handling of all work types while maintaining quality and agility at enterprise scale through pure git-based distributed coordination. The system is domain-agnostic and scales from software development to manufacturing, research, and even atomic-level processes.
