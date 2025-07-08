@@ -58,6 +58,7 @@ test-hello:
 	@cd $(TEST_DIR)/test-hello && \
 		mkdir -p tools && \
 		cp -r $(NIMSFORESTWORK_PATH) tools/nimsforestwork && \
+		rm -rf tools/nimsforestwork/.git && \
 		make -f tools/nimsforestwork/MAKEFILE.nimsforestwork nimsforestwork-hello >/dev/null 2>&1 && \
 		echo -e "$(GREEN)[PASS]$(NC) Basic functionality works" || \
 		(echo -e "$(RED)[FAIL]$(NC) Basic functionality failed" && exit 1)
@@ -69,6 +70,7 @@ test-init:
 	@cd $(TEST_DIR)/test-init && \
 		mkdir -p tools && \
 		cp -r $(NIMSFORESTWORK_PATH) tools/nimsforestwork && \
+		rm -rf tools/nimsforestwork/.git && \
 		make -f tools/nimsforestwork/MAKEFILE.nimsforestwork nimsforestwork-init >/dev/null 2>&1 && \
 		test -d docs/work/proposals && \
 		test -d docs/work/bugs && \
@@ -80,7 +82,9 @@ test-workspace:
 	@echo -e "$(BLUE)[INFO]$(NC) Testing workspace setup..."
 	@$(call create-mock-repo,test-workspace)
 	@cd $(TEST_DIR)/test-workspace && \
+		mkdir -p tools && \
 		cp -r $(NIMSFORESTWORK_PATH) tools/nimsforestwork && \
+		rm -rf tools/nimsforestwork/.git && \
 		WORKSPACE_ROOT=$(TEST_DIR)/test-workspace-ws \
 		make -f tools/nimsforestwork/MAKEFILE.nimsforestwork nimsforestwork-setup-workspace >/dev/null 2>&1 && \
 		test -d $(TEST_DIR)/test-workspace-ws/main && \
@@ -94,7 +98,9 @@ test-templates:
 	@echo -e "$(BLUE)[INFO]$(NC) Testing templates..."
 	@$(call create-mock-repo,test-templates)
 	@cd $(TEST_DIR)/test-templates && \
+		mkdir -p tools && \
 		cp -r $(NIMSFORESTWORK_PATH) tools/nimsforestwork && \
+		rm -rf tools/nimsforestwork/.git && \
 		make -f tools/nimsforestwork/MAKEFILE.nimsforestwork nimsforestwork-init >/dev/null 2>&1 && \
 		test -f docs/work/proposals/template.md && \
 		test -f docs/work/bugs/template.md && \

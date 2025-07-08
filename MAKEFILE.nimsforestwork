@@ -51,34 +51,39 @@ nimsforestwork-init:
 	@echo "✅ Work folders created"
 	@echo ""
 	@echo "📝 Creating templates..."
-	@if [ ! -f docs/work/proposals/template.md ]; then \
-		cp pkg/nimsforestwork/templates/proposal.md docs/work/proposals/template.md; \
+	@NIMSFORESTWORK_DIR=$$(find . -name "MAKEFILE.nimsforestwork" -exec dirname {} \; | head -1); \
+	if [ ! -f docs/work/proposals/template.md ]; then \
+		cp $$NIMSFORESTWORK_DIR/templates/proposal.md docs/work/proposals/template.md; \
 		echo "✅ Proposal template created"; \
 	else \
 		echo "ℹ️  Proposal template already exists"; \
 	fi
-	@if [ ! -f docs/work/bugs/template.md ]; then \
-		cp pkg/nimsforestwork/templates/bug.md docs/work/bugs/template.md; \
+	@NIMSFORESTWORK_DIR=$$(find . -name "MAKEFILE.nimsforestwork" -exec dirname {} \; | head -1); \
+	if [ ! -f docs/work/bugs/template.md ]; then \
+		cp $$NIMSFORESTWORK_DIR/templates/bug.md docs/work/bugs/template.md; \
 		echo "✅ Bug template created"; \
 	else \
 		echo "ℹ️  Bug template already exists"; \
 	fi
-	@if [ ! -f docs/work/changerequests/template.md ]; then \
-		cp pkg/nimsforestwork/templates/changerequest.md docs/work/changerequests/template.md; \
+	@NIMSFORESTWORK_DIR=$$(find . -name "MAKEFILE.nimsforestwork" -exec dirname {} \; | head -1); \
+	if [ ! -f docs/work/changerequests/template.md ]; then \
+		cp $$NIMSFORESTWORK_DIR/templates/changerequest.md docs/work/changerequests/template.md; \
 		echo "✅ Change request template created"; \
 	else \
 		echo "ℹ️  Change request template already exists"; \
 	fi
-	@if [ ! -f docs/work/improvedocumentation/template.md ]; then \
-		cp pkg/nimsforestwork/templates/improvedocumentation.md docs/work/improvedocumentation/template.md; \
+	@NIMSFORESTWORK_DIR=$$(find . -name "MAKEFILE.nimsforestwork" -exec dirname {} \; | head -1); \
+	if [ ! -f docs/work/improvedocumentation/template.md ]; then \
+		cp $$NIMSFORESTWORK_DIR/templates/improvedocumentation.md docs/work/improvedocumentation/template.md; \
 		echo "✅ Documentation template created"; \
 	else \
 		echo "ℹ️  Documentation template already exists"; \
 	fi
 	@echo ""
 	@echo "📖 Creating README..."
-	@if [ ! -f docs/work/README.md ]; then \
-		cp pkg/nimsforestwork/README.md docs/work/README.md; \
+	@NIMSFORESTWORK_DIR=$$(find . -name "MAKEFILE.nimsforestwork" -exec dirname {} \; | head -1); \
+	if [ ! -f docs/work/README.md ]; then \
+		cp $$NIMSFORESTWORK_DIR/README.md docs/work/README.md; \
 		echo "✅ README.md created"; \
 	else \
 		echo "ℹ️  README.md already exists"; \
