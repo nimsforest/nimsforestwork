@@ -1,5 +1,10 @@
 # NimsforestWork - AI-Powered Work Management System
 
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](#)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Linux%20|%20macOS%20|%20Windows-lightgrey.svg)](#)
+[![Dependencies](https://img.shields.io/badge/dependencies-git%20|%20make-green.svg)](#)
+
 A self-contained work management system designed for developers and AI agents. Provides deterministic work item lifecycle management with Netflix-style deployment philosophy.
 
 ## 🚀 Quick Setup: Transform Any Repo into a Git Worktree Workspace
