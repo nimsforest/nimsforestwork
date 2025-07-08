@@ -56,6 +56,7 @@ test-hello:
 	@echo -e "$(BLUE)[INFO]$(NC) Testing basic functionality..."
 	@$(call create-mock-repo,test-hello)
 	@cd $(TEST_DIR)/test-hello && \
+		mkdir -p tools && \
 		cp -r $(NIMSFORESTWORK_PATH) tools/nimsforestwork && \
 		make -f tools/nimsforestwork/MAKEFILE.nimsforestwork nimsforestwork-hello >/dev/null 2>&1 && \
 		echo -e "$(GREEN)[PASS]$(NC) Basic functionality works" || \
@@ -66,6 +67,7 @@ test-init:
 	@echo -e "$(BLUE)[INFO]$(NC) Testing project initialization..."
 	@$(call create-mock-repo,test-init)
 	@cd $(TEST_DIR)/test-init && \
+		mkdir -p tools && \
 		cp -r $(NIMSFORESTWORK_PATH) tools/nimsforestwork && \
 		make -f tools/nimsforestwork/MAKEFILE.nimsforestwork nimsforestwork-init >/dev/null 2>&1 && \
 		test -d docs/work/proposals && \
