@@ -1,6 +1,6 @@
 # NimsforestWork - AI-Powered Work Management System
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](#)
+[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](#)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20|%20macOS%20|%20Windows-lightgrey.svg)](#)
 [![Dependencies](https://img.shields.io/badge/dependencies-git%20|%20make-green.svg)](#)
@@ -84,6 +84,22 @@ git worktree add ../bug-fix-login origin/bug-fix-login
 ### Convention:
 - **Project**: `{name}`
 - **Workspace**: `{name}-workspace` (recommended)
+
+## 📋 Workflow Documentation
+
+NimsforestWork implements a comprehensive issue management and product development workflow that supports the complete lifecycle from customer support to production delivery.
+
+**📖 [Read the complete workflow documentation](WORKFLOW.md)**
+
+Key features:
+- **Issue Intake**: Systematic processing of customer support tickets
+- **Product Backlog**: Complete lifecycle from analysis to production
+- **Quality Gates**: Ensure quality while maintaining agility
+- **State Management**: Clear progression through development stages
+- **Business Rating**: Priority-based work management
+- **Release Management**: Structured release process
+
+The workflow supports bugs, change requests, new features, and documentation improvements through a unified process.
 
 ## Alternative Setup Methods
 
