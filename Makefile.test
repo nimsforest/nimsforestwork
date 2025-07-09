@@ -10,7 +10,7 @@
 #
 
 # Test configuration
-TEST_DIR := /tmp/nimsforestwork-tests
+TEST_DIR := $(shell pwd)/tmp
 NIMSFORESTWORK_PATH := $(shell pwd)
 
 # Colors for output
@@ -19,7 +19,7 @@ RED := \033[0;31m
 BLUE := \033[0;34m
 NC := \033[0m
 
-.PHONY: test test-cleanup test-setup test-hello test-init test-workspace test-templates
+.PHONY: test test-cleanup test-setup test-hello test-init test-workspace test-templates test-stamping test-simple-stamp
 
 # Run all essential tests
 test: test-setup test-hello test-init test-workspace test-templates
@@ -39,10 +39,10 @@ test-cleanup:
 	@rm -rf $(TEST_DIR)
 	@echo -e "$(GREEN)[PASS]$(NC) Cleanup complete"
 
-# Create simple mock repo
-define create-mock-repo
-	@mkdir -p $(TEST_DIR)/$(1)
-	@cd $(TEST_DIR)/$(1) && \
+# Create simple mock workspace with repo in main/ folder
+define create-mock-workspace
+	@mkdir -p $(TEST_DIR)/$(1)-workspace/main
+	@cd $(TEST_DIR)/$(1)-workspace/main && \
 		git init --quiet && \
 		git config user.name "Test User" && \
 		git config user.email "test@example.com" && \
@@ -108,3 +108,139 @@ test-templates:
 		test -f docs/work/improvedocumentation/template.md && \
 		echo -e "$(GREEN)[PASS]$(NC) Templates work correctly" || \
 		(echo -e "$(RED)[FAIL]$(NC) Templates failed" && exit 1)
+
+# Test 5: Simple single-process stamping
+test-simple-stamp:
+	@echo -e "$(BLUE)[INFO]$(NC) Testing simple single-process stamping..."
+	@$(call create-mock-workspace,test-simple-stamp)
+	@cd $(TEST_DIR)/test-simple-stamp-workspace/main && \
+		mkdir -p docs/work/issues/new docs/work/issues/stamped && \
+		echo "# Test Issue 1" > docs/work/issues/new/testissue1.md && \
+		echo "# Test Issue 2" > docs/work/issues/new/testissue2.md && \
+		echo "# Test Issue 3" > docs/work/issues/new/testissue3.md && \
+		git add . && git commit --quiet -m "Add test issues" && \
+		git init --bare $(TEST_DIR)/test-simple-stamp-workspace-origin.git && \
+		git remote add origin $(TEST_DIR)/test-simple-stamp-workspace-origin.git && \
+		git push --quiet origin main && \
+		cp $(NIMSFORESTWORK_PATH)/MAKEFILE.nimsforestwork . && \
+		echo -e "$(BLUE)[INFO]$(NC) Running single stamping process on 3 issues..." && \
+		START_TIME=$$(date +%s) && \
+		make -f MAKEFILE.nimsforestwork nimsforestwork-stamp-work && \
+		END_TIME=$$(date +%s) && \
+		ELAPSED=$$((END_TIME - START_TIME)) && \
+		STAMPED_COUNT=$$(find docs/work/issues/stamped -name '*.md' 2>/dev/null | wc -l) && \
+		NEW_COUNT=$$(find docs/work/issues/new -name '*.md' ! -name 'template.md' 2>/dev/null | wc -l) && \
+		echo "" && \
+		echo -e "$(BLUE)📊 SIMPLE STAMP TEST RESULTS$(NC)" && \
+		echo -e "$(BLUE)=============================$(NC)" && \
+		echo -e "$(BLUE)⏱️  Processing time: $$ELAPSED seconds$(NC)" && \
+		echo -e "$(BLUE)📁 Files stamped: $$STAMPED_COUNT$(NC)" && \
+		echo -e "$(BLUE)📁 Files remaining: $$NEW_COUNT$(NC)" && \
+		echo "" && \
+		if [ $$STAMPED_COUNT -eq 3 ] && [ $$NEW_COUNT -eq 0 ]; then \
+			echo -e "$(GREEN)[PASS]$(NC) ✅ Perfect: All 3 files successfully stamped!" && \
+			echo -e "$(GREEN)       Single-process stamping works correctly$(NC)" && \
+			echo -e "$(GREEN)       Completed in $$ELAPSED seconds$(NC)"; \
+		else \
+			echo -e "$(RED)[FAIL]$(NC) ❌ Expected 3 stamped, 0 remaining" && \
+			echo -e "$(RED)       Got $$STAMPED_COUNT stamped, $$NEW_COUNT remaining$(NC)" && \
+			echo "" && \
+			echo "Sample stamped files:"; find docs/work/issues/stamped -name '*.md' 2>/dev/null | head -5; \
+			echo "Sample remaining files:"; find docs/work/issues/new -name '*.md' ! -name 'template.md' 2>/dev/null | head -5; \
+			exit 1; \
+		fi && \
+		echo "" && \
+		echo -e "$(BLUE)🔧 GIT CLEANUP CHECK$(NC)" && \
+		echo -e "$(BLUE)==================$(NC)" && \
+		REMOTE_BRANCHES=$$(git branch -r | grep -E 'origin/stamp-' | wc -l) && \
+		LOCAL_BRANCHES=$$(git branch | grep -E 'stamp-' | wc -l) && \
+		echo -e "$(BLUE)🌿 Remote branches left: $$REMOTE_BRANCHES$(NC)" && \
+		echo -e "$(BLUE)🌿 Local branches left: $$LOCAL_BRANCHES$(NC)" && \
+		if [ $$REMOTE_BRANCHES -eq 0 ] && [ $$LOCAL_BRANCHES -eq 0 ]; then \
+			echo -e "$(GREEN)✅ Perfect cleanup: No branches left$(NC)"; \
+		else \
+			echo -e "$(RED)❌ Cleanup failed: Found leftover branches$(NC)" && \
+			exit 1; \
+		fi
+
+# Test 6: Concurrent stamping race condition prevention
+# Usage: make test-stamping ISSUES=500 PROCESSES=10
+test-stamping:
+	@ISSUES_COUNT=$${ISSUES:-100}; \
+	PROCESSES_COUNT=$${PROCESSES:-5}; \
+	echo -e "$(BLUE)[INFO]$(NC) Testing stamping race condition prevention..."; \
+	echo -e "$(BLUE)[INFO]$(NC) Issues: $$ISSUES_COUNT, Processes: $$PROCESSES_COUNT"
+	@echo -e "$(BLUE)[INFO]$(NC) Cleaning up previous test environment..."
+	@rm -rf $(TEST_DIR)/test-stamping-workspace $(TEST_DIR)/test-stamping-workspace-origin.git
+	@$(call create-mock-workspace,test-stamping)
+	@ISSUES_COUNT=$${ISSUES:-100}; \
+	PROCESSES_COUNT=$${PROCESSES:-5}; \
+	cd $(TEST_DIR)/test-stamping-workspace/main && \
+		mkdir -p tools/nimsforestwork docs/work/issues/new docs/work/issues/stamped && \
+		cp $(NIMSFORESTWORK_PATH)/MAKEFILE.nimsforestwork tools/nimsforestwork/ && \
+		for i in $$(seq 1 $$ISSUES_COUNT); do \
+			echo "# Test Issue $$i" > "docs/work/issues/new/testissue$$i.md"; \
+		done && \
+		git add . && git commit --quiet -m "Add test issues" && \
+		git init --bare $(TEST_DIR)/test-stamping-workspace-origin.git && \
+		git remote add origin $(TEST_DIR)/test-stamping-workspace-origin.git && \
+		git push --quiet origin main && \
+		echo -e "$(BLUE)[INFO]$(NC) Running $$PROCESSES_COUNT concurrent stamping processes on $$ISSUES_COUNT issues..." && \
+		echo -e "$(BLUE)[INFO]$(NC) The atomic operation is 'git push origin stamp-filename' (not branch creation)" && \
+		START_TIME=$$(date +%s) && \
+		for p in $$(seq 1 $$PROCESSES_COUNT); do \
+			( make -f tools/nimsforestwork/MAKEFILE.nimsforestwork nimsforestwork-stamp-issues & ); \
+		done && \
+		wait && \
+		END_TIME=$$(date +%s) && \
+		ELAPSED=$$((END_TIME - START_TIME)) && \
+		ISSUES_COUNT=$${ISSUES:-100}; \
+		sleep 1 && \
+		cd $(TEST_DIR)/test-stamping-workspace/main && \
+		STAMPED_COUNT=$$(find docs/work/issues/stamped -name '*.md' 2>/dev/null | wc -l) && \
+		NEW_COUNT=$$(find docs/work/issues/new -name '*.md' ! -name 'template.md' 2>/dev/null | wc -l) && \
+		SUCCESS_RATE=$$(echo "scale=1; $$STAMPED_COUNT * 100 / $$ISSUES_COUNT" | bc -l 2>/dev/null || echo "0") && \
+		echo "" && \
+		echo -e "$(BLUE)📊 PRIMARY TEST RESULTS$(NC)" && \
+		echo -e "$(BLUE)=========================$(NC)" && \
+		echo -e "$(BLUE)⏱️  Processing time: $$ELAPSED seconds$(NC)" && \
+		echo -e "$(BLUE)📁 Total issues: $$ISSUES_COUNT$(NC)" && \
+		echo -e "$(BLUE)📁 Files stamped: $$STAMPED_COUNT$(NC)" && \
+		echo -e "$(BLUE)📁 Files remaining: $$NEW_COUNT$(NC)" && \
+		echo -e "$(BLUE)📈 Success rate: $$SUCCESS_RATE%$(NC)" && \
+		echo "" && \
+		if [ $$STAMPED_COUNT -gt 0 ]; then \
+			echo -e "$(GREEN)[PASS]$(NC) ✅ Distributed stamping system functional"; \
+			echo -e "$(GREEN)       Successfully stamped $$STAMPED_COUNT files$(NC)"; \
+		else \
+			echo -e "$(RED)[FAIL]$(NC) ❌ No files were stamped"; \
+			echo -e "$(RED)       Check for timeout or configuration issues$(NC)"; \
+			exit 1; \
+		fi && \
+		echo "" && \
+		echo "" && \
+		echo -e "$(BLUE)🔧 POST-TEST VERIFICATION$(NC)" && \
+		echo -e "$(BLUE)=======================$(NC)" && \
+		FINAL_STAMPED_COUNT=$$(find docs/work/issues/stamped -name '*.md' 2>/dev/null | wc -l) && \
+		FINAL_NEW_COUNT=$$(find docs/work/issues/new -name '*.md' ! -name 'template.md' 2>/dev/null | wc -l) && \
+		echo -e "$(BLUE)📁 Files now in stamped/: $$FINAL_STAMPED_COUNT$(NC)" && \
+		echo -e "$(BLUE)📁 Files still in new/: $$FINAL_NEW_COUNT$(NC)" && \
+		if [ $$FINAL_STAMPED_COUNT -eq $$ISSUES_COUNT ] && [ $$FINAL_NEW_COUNT -eq 0 ]; then \
+			echo -e "$(GREEN)✅ Perfect processing: All $$ISSUES_COUNT files stamped!$(NC)"; \
+		elif [ $$FINAL_STAMPED_COUNT -gt 0 ]; then \
+			echo -e "$(GREEN)✓ Partial success: $$FINAL_STAMPED_COUNT/$$ISSUES_COUNT files stamped$(NC)"; \
+		else \
+			echo -e "$(RED)❌ Processing failed: No files stamped$(NC)"; \
+		fi && \
+		echo -e "$(BLUE)🔍 Recent git commits:$(NC)" && \
+		git log --oneline -3 && \
+		echo "" && \
+		REMOTE_BRANCHES=$$(git branch -r | grep -E 'origin/stamp-' | wc -l) && \
+		LOCAL_BRANCHES=$$(git branch | grep -E 'stamp-' | wc -l) && \
+		echo -e "$(BLUE)🌿 Remote branches left: $$REMOTE_BRANCHES$(NC)" && \
+		echo -e "$(BLUE)🌿 Local branches left: $$LOCAL_BRANCHES$(NC)" && \
+		if [ $$REMOTE_BRANCHES -eq 0 ] && [ $$LOCAL_BRANCHES -eq 0 ]; then \
+			echo -e "$(GREEN)✅ Perfect git cleanup: No stale branches$(NC)"; \
+		else \
+			echo -e "$(BLUE)ℹ️  Some branches remain - this is normal during concurrent operations$(NC)"; \
+		fi

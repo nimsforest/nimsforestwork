@@ -23,7 +23,7 @@ ls docs/work/issues/new/*.md
 # Example: Found lostmypassword.md
 # Step 1: Claim the stamping work with branch
 git checkout -b stamp-lostmypassword
-git push -u origin stamp-lostmypassword  # ONLY ONE AGENT SUCCEEDS
+git push origin stamp-lostmypassword  # ONLY ONE AGENT SUCCEEDS
 
 # Step 2: If push succeeds, you own the stamping
 UUID=$(uuidgen | cut -d'-' -f1)  # Generate 8-character UUID
@@ -33,7 +33,7 @@ git push
 
 # Step 3: Clean up stamping branch (work complete)
 git checkout main
-git branch -d stamp-lostmypassword
+git branch -D stamp-lostmypassword  # Force delete - branch is ephemeral lock
 git push origin --delete stamp-lostmypassword
 ```
 
@@ -43,6 +43,8 @@ git push origin --delete stamp-lostmypassword
 - **Atomic claiming**: Only one agent can push branch with same name
 - **Failed agents**: Immediately try next available work item
 - **No duplicates**: Impossible to create multiple stamped files from one original
+- **No upstream tracking**: Branches are ephemeral locks, not collaboration branches
+- **Force deletion safe**: `git branch -D` is correct since branches are temporary locks
 
 ### Stage 2: Categorization (stamped/ → category/)
 
@@ -59,7 +61,7 @@ ls docs/work/issues/stamped/*.md
 # Example: Found lostmypassword-a1b2c3d4.md
 # Step 1: Claim the categorization work
 git checkout -b triaging-lostmypassword-a1b2c3d4
-git push -u origin triaging-lostmypassword-a1b2c3d4
+git push origin triaging-lostmypassword-a1b2c3d4
 
 # Step 2: Analyze and categorize
 # Read the work item, determine if it's a bug, changerequest, newfeature, etc.
@@ -87,7 +89,7 @@ fi
 
 # Step 4: Clean up triaging branch
 git checkout main
-git branch -d triaging-lostmypassword-a1b2c3d4
+git branch -D triaging-lostmypassword-a1b2c3d4  # Force delete - branch is ephemeral lock
 git push origin --delete triaging-lostmypassword-a1b2c3d4
 ```
 
@@ -136,6 +138,8 @@ docs/work/bugs/
 - **Pattern**: `stamp-{original-filename}`
 - **Example**: `stamp-lostmypassword`
 - **Lifecycle**: Create → Push → Stamp → Delete
+- **No upstream tracking**: Branches are temporary locks, deleted immediately after use
+- **Force deletion**: Use `git branch -D` since branches are ephemeral locks
 
 ### Triaging Branches  
 - **Pattern**: `triaging-{stamped-filename}`
@@ -147,19 +151,41 @@ docs/work/bugs/
 - **Example**: `pending-lostmypassword-a1b2c3d4`
 - **Used for**: Moving items to pending state during triage or development
 
+## Branch Deletion Logic
+
+### Why Force Delete (`-D`) is Correct
+
+**Branch lifecycle for stamping:**
+1. **Create**: `git checkout -b stamp-filename`
+2. **Push**: `git push origin stamp-filename` (no upstream tracking)
+3. **Work**: Move file, commit, push changes
+4. **Delete**: `git branch -D stamp-filename` (force delete)
+
+**Why `-D` instead of `-d`:**
+- **Without upstream tracking**: Git doesn't know branch exists remotely
+- **Safety check fails**: `git branch -d` checks if branch is "fully merged"
+- **False negative**: Git thinks branch has "unmerged changes" 
+- **Actually safe**: We successfully pushed our work, branch served its purpose
+
+**Branch purpose:**
+- **Ephemeral locks**: Temporary claim mechanism, not collaboration branches
+- **Work already saved**: Changes committed and pushed before deletion
+- **No data loss**: Branch deletion doesn't affect pushed commits
+- **Cleanup required**: Prevents branch accumulation
+
 ## Error Handling
 
 ### Stamping Failures
 ```bash
 # If branch push fails (someone else claimed it)
-git branch -d stamp-lostmypassword  # Clean up local branch
+git branch -D stamp-lostmypassword  # Force delete - branch is ephemeral lock
 # Immediately try next available work item
 ```
 
 ### Categorization Failures
 ```bash
 # If branch push fails (someone else claimed it)
-git branch -d triaging-lostmypassword-a1b2c3d4  # Clean up local branch
+git branch -D triaging-lostmypassword-a1b2c3d4  # Force delete - branch is ephemeral lock
 # Immediately try next available work item
 ```
 
