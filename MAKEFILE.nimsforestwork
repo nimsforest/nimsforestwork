@@ -326,6 +326,7 @@ nimsforestwork-stamp-issues:
 	START_TIME=$$(date +%s); \
 	echo "⏱️  Timeout settings: Soft=$$SOFT_TIMEOUT s, Hard=$$HARD_TIMEOUT s"; \
 	echo ""; \
+	trap 'echo "🧹 Cleaning up stale worktree references..."; git worktree prune 2>/dev/null || true' EXIT INT TERM; \
 	while true; do \
 		CURRENT_TIME=$$(date +%s); \
 		ELAPSED=$$((CURRENT_TIME - START_TIME)); \
