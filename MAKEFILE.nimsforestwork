@@ -455,8 +455,9 @@ nimsforestwork-triage-issues:
 		echo "🔄 Triaging... ($$ELAPSED s elapsed)"; \
 		WORK_ITEMS=$$(find docs/work/issues/stamped -maxdepth 1 -type d ! -name stamped 2>/dev/null); \
 		if [ -z "$$WORK_ITEMS" ]; then \
-			echo "✅ No stamped items to triage - completed successfully"; \
-			break; \
+			echo "⏳ No stamped items found - waiting for stamping agents..."; \
+			sleep 2; \
+			continue; \
 		fi; \
 		if [ $$ELAPSED -ge $$HARD_TIMEOUT ]; then \
 			echo "⏰ Hard timeout reached ($$HARD_TIMEOUT s) - stopping"; \
@@ -862,3 +863,32 @@ nimsforestwork-setup-workspace:
 	echo "🤖 Tell your AI agent:"; \
 	echo "   'Read AGENTINSTRUCTIONS.md and follow those instructions'"; \
 	echo ""
+
+# =============================================================================
+# MIXED WORKFLOW GROOMING (Complete Pipeline Testing)
+# =============================================================================
+
+# Run mixed parallel agents: half stamping, half triaging
+# This simulates real-world concurrent grooming where agents work on different phases
+nimsforestwork-groom-parallel:
+	@echo "🌲 Mixed Parallel Grooming Agents"
+	@echo "================================="
+	@echo ""
+	@AGENTS_COUNT=$${AGENTS:-10}; \
+	STAMP_AGENTS=$$((AGENTS_COUNT / 2)); \
+	TRIAGE_AGENTS=$$((AGENTS_COUNT - STAMP_AGENTS)); \
+	echo "🚀 Starting $$AGENTS_COUNT mixed agents:"; \
+	echo "   📥 $$STAMP_AGENTS stamping agents (new → stamped)"; \
+	echo "   📤 $$TRIAGE_AGENTS triaging agents (stamped → categorized)"; \
+	echo ""; \
+	echo "⏱️  Timeout settings: Soft=$${SOFT_TIMEOUT:-30} s, Hard=$${HARD_TIMEOUT:-60} s"; \
+	echo ""; \
+	for i in $$(seq 1 $$STAMP_AGENTS); do \
+		( $(MAKE) -s -f $(MAKEFILE_LIST) nimsforestwork-stamp-issues & ); \
+	done; \
+	for i in $$(seq 1 $$TRIAGE_AGENTS); do \
+		( $(MAKE) -s -f $(MAKEFILE_LIST) nimsforestwork-triage-issues & ); \
+	done; \
+	echo "🔄 All agents launched - processing concurrently..."; \
+	wait; \
+	echo "✅ All mixed grooming agents completed"

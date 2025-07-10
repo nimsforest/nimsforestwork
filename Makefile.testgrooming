@@ -1,0 +1,155 @@
+# =============================================================================
+# NimsforestWork Grooming Test Suite
+# =============================================================================
+#
+# Test suite for complete workflow: new → stamped → categorized
+# Tests concurrent stamping and triaging with mixed agent types
+#
+# Usage:
+#   make -f Makefile.testgrooming test-grooming                     # Default: 50 issues, 10 agents
+#   make -f Makefile.testgrooming test-grooming ISSUES_COUNT=100 AGENTS_COUNT=20
+#
+
+# Configuration
+ISSUES_COUNT ?= 50
+AGENTS_COUNT ?= 10
+SOFT_TIMEOUT ?= 60
+HARD_TIMEOUT ?= 120
+TEST_DIR := tmp
+PROJECT_NAME := test-grooming-workspace
+
+# Colors for output
+GREEN := \033[0;32m
+RED := \033[0;31m
+YELLOW := \033[1;33m
+BLUE := \033[0;34m
+NC := \033[0m # No Color
+
+.PHONY: test-grooming setup-test-grooming cleanup-test-grooming
+
+# Main test target
+test-grooming: cleanup-test-grooming setup-test-grooming
+	@echo -e "$(BLUE)🌲 COMPLETE WORKFLOW GROOMING TEST$(NC)"
+	@echo -e "$(BLUE)==================================$(NC)"
+	@echo ""
+	@echo -e "$(YELLOW)📊 Test Configuration:$(NC)"
+	@echo "  Issues to create: $(ISSUES_COUNT)"
+	@echo "  Mixed agents: $(AGENTS_COUNT) (half stamping, half triaging)"
+	@echo "  Soft timeout: $(SOFT_TIMEOUT)s"
+	@echo "  Hard timeout: $(HARD_TIMEOUT)s"
+	@echo ""
+	@echo -e "$(YELLOW)🔄 PHASE 1: Creating $(ISSUES_COUNT) test issues...$(NC)"
+	@cd $(TEST_DIR)/$(PROJECT_NAME)/main && \
+	for i in $$(seq 1 $(ISSUES_COUNT)); do \
+		ISSUE_NAME="testissue$$i"; \
+		echo "# Test Issue $$i" > "docs/work/issues/new/$$ISSUE_NAME.md"; \
+		echo "" >> "docs/work/issues/new/$$ISSUE_NAME.md"; \
+		echo "This is test issue number $$i for complete workflow testing." >> "docs/work/issues/new/$$ISSUE_NAME.md"; \
+		echo "Priority: $$(shuf -i 1-5 -n 1)" >> "docs/work/issues/new/$$ISSUE_NAME.md"; \
+		echo "Type: $$(echo 'bug changerequest newfeature documentation' | tr ' ' '\n' | shuf -n 1)" >> "docs/work/issues/new/$$ISSUE_NAME.md"; \
+	done && \
+	git add docs/work/issues/new/ && \
+	git commit -m "Add $(ISSUES_COUNT) test issues for grooming workflow" && \
+	git push origin main && \
+	echo "✅ Created and committed $(ISSUES_COUNT) test issues in docs/work/issues/new/"
+	@echo ""
+	@echo -e "$(YELLOW)🏭 PHASE 2: Mixed concurrent grooming with $(AGENTS_COUNT) agents...$(NC)"
+	@echo -e "$(YELLOW)     Running simultaneous stamping and triaging agents$(NC)"
+	@cd $(TEST_DIR)/$(PROJECT_NAME)/main && \
+	SOFT_TIMEOUT=$(SOFT_TIMEOUT) HARD_TIMEOUT=$(HARD_TIMEOUT) \
+	$(MAKE) -f tools/nimsforestwork/MAKEFILE.nimsforestwork nimsforestwork-groom-parallel AGENTS=$(AGENTS_COUNT)
+	@echo ""
+	@echo -e "$(BLUE)📋 POST-TEST VERIFICATION$(NC)"
+	@echo -e "$(BLUE)=========================$(NC)"
+	@cd $(TEST_DIR)/$(PROJECT_NAME)/main && \
+	NEW_COUNT=$$(find docs/work/issues/new -name '*.md' ! -name 'template.md' 2>/dev/null | wc -l) && \
+	STAMPED_COUNT=$$(find docs/work/issues/stamped -name '*.md' 2>/dev/null | wc -l) && \
+	BUGS_COUNT=$$(find docs/work/bugs/next -name '*.md' 2>/dev/null | wc -l) && \
+	CHANGES_COUNT=$$(find docs/work/changerequests/next -name '*.md' 2>/dev/null | wc -l) && \
+	FEATURES_COUNT=$$(find docs/work/newfeatures/next -name '*.md' 2>/dev/null | wc -l) && \
+	DOCS_COUNT=$$(find docs/work/improvedocumentation/next -name '*.md' 2>/dev/null | wc -l) && \
+	TOTAL_PROCESSED=$$((BUGS_COUNT + CHANGES_COUNT + FEATURES_COUNT + DOCS_COUNT)) && \
+	TOTAL_IN_PIPELINE=$$((NEW_COUNT + STAMPED_COUNT)) && \
+	COMPLETION_RATE=$$(echo "scale=1; $$TOTAL_PROCESSED * 100 / $(ISSUES_COUNT)" | bc -l 2>/dev/null || echo "0") && \
+	echo "📊 Grooming Results Summary:" && \
+	echo "  Issues created: $(ISSUES_COUNT)" && \
+	echo "  Items still in new/: $$NEW_COUNT" && \
+	echo "  Items still in stamped/: $$STAMPED_COUNT" && \
+	echo "  Items in pipeline: $$TOTAL_IN_PIPELINE" && \
+	echo "  Bugs triaged: $$BUGS_COUNT" && \
+	echo "  Change requests triaged: $$CHANGES_COUNT" && \
+	echo "  New features triaged: $$FEATURES_COUNT" && \
+	echo "  Documentation triaged: $$DOCS_COUNT" && \
+	echo "  Total fully processed: $$TOTAL_PROCESSED" && \
+	echo "  Completion rate: $$COMPLETION_RATE%" && \
+	echo "" && \
+	if [ $$TOTAL_PROCESSED -eq $(ISSUES_COUNT) ] && [ $$TOTAL_IN_PIPELINE -eq 0 ]; then \
+		echo -e "$(GREEN)✅ Perfect grooming: All $(ISSUES_COUNT) items fully processed!$(NC)"; \
+		echo -e "$(GREEN)✅ Complete pipeline: new → stamped → categorized$(NC)"; \
+	elif [ $$TOTAL_PROCESSED -gt 0 ]; then \
+		echo -e "$(YELLOW)⚠️  Partial grooming: $$TOTAL_PROCESSED/$(ISSUES_COUNT) items completed ($$COMPLETION_RATE%)$(NC)"; \
+		if [ $$NEW_COUNT -gt 0 ]; then \
+			echo -e "$(YELLOW)⚠️  $$NEW_COUNT items still need stamping$(NC)"; \
+		fi; \
+		if [ $$STAMPED_COUNT -gt 0 ]; then \
+			echo -e "$(YELLOW)⚠️  $$STAMPED_COUNT items still need triaging$(NC)"; \
+		fi; \
+		if [ $$COMPLETION_RATE -gt 50 ]; then \
+			echo -e "$(GREEN)✅ Good progress: Mixed agent grooming is working$(NC)"; \
+		fi; \
+	else \
+		echo -e "$(RED)❌ Grooming failed: No items were fully processed$(NC)"; \
+	fi
+
+# Setup test environment
+setup-test-grooming:
+	@echo -e "$(YELLOW)🔧 Setting up grooming test environment...$(NC)"
+	@rm -rf $(TEST_DIR)/$(PROJECT_NAME) $(TEST_DIR)/$(PROJECT_NAME)-origin.git
+	@mkdir -p $(TEST_DIR)
+	@cd $(TEST_DIR) && \
+	git init --bare $(PROJECT_NAME)-origin.git && \
+	git clone $(PROJECT_NAME)-origin.git $(PROJECT_NAME) && \
+	cd $(PROJECT_NAME) && \
+	git config user.name "Test Agent" && \
+	git config user.email "test@nimsforestwork.dev" && \
+	mkdir -p main && \
+	cd main && \
+	git init && \
+	git remote add origin ../../$(PROJECT_NAME)-origin.git && \
+	git config user.name "Test Agent" && \
+	git config user.email "test@nimsforestwork.dev" && \
+	mkdir -p tools/nimsforestwork && \
+	cp ../../../MAKEFILE.nimsforestwork tools/nimsforestwork/ && \
+	$(MAKE) -f tools/nimsforestwork/MAKEFILE.nimsforestwork nimsforestwork-init && \
+	git add . && \
+	git commit -m "Initial test setup with nimsforestwork" && \
+	git push -u origin main
+	@echo -e "$(GREEN)✅ Grooming test environment ready$(NC)"
+
+# Cleanup test environment
+cleanup-test-grooming:
+	@echo -e "$(YELLOW)🧹 Cleaning up grooming test environment...$(NC)"
+	@rm -rf $(TEST_DIR)/$(PROJECT_NAME) $(TEST_DIR)/$(PROJECT_NAME)-origin.git
+	@echo -e "$(GREEN)✅ Cleanup complete$(NC)"
+
+# Help target
+help-grooming:
+	@echo "🌲 NimsforestWork Grooming Test Suite"
+	@echo "====================================="
+	@echo ""
+	@echo "Available targets:"
+	@echo "  test-grooming              - Run complete workflow test (default: 50 issues, 10 agents)"
+	@echo "  setup-test-grooming        - Setup test environment only"
+	@echo "  cleanup-test-grooming      - Cleanup test environment only"
+	@echo "  help-grooming              - Show this help"
+	@echo ""
+	@echo "Configuration options:"
+	@echo "  ISSUES_COUNT=N            - Number of issues to create (default: 50)"
+	@echo "  AGENTS_COUNT=N            - Number of mixed agents (default: 10)"
+	@echo "  SOFT_TIMEOUT=N            - Soft timeout in seconds (default: 60)"
+	@echo "  HARD_TIMEOUT=N            - Hard timeout in seconds (default: 120)"
+	@echo ""
+	@echo "Examples:"
+	@echo "  make -f Makefile.testgrooming test-grooming"
+	@echo "  make -f Makefile.testgrooming test-grooming ISSUES_COUNT=100 AGENTS_COUNT=20"
+	@echo "  make -f Makefile.testgrooming test-grooming SOFT_TIMEOUT=120 HARD_TIMEOUT=240"
