@@ -428,6 +428,129 @@ nimsforestwork-stamp-issues-parallel:
 	done && wait; \
 	echo "✅ All parallel stamping agents completed"
 
+# Placeholder triage function - randomly assigns categories
+nimsforestwork-triage-classify:
+	@CATEGORIES="bugs changerequests newfeatures improvedocumentation"; \
+	CATEGORY=$$(echo $$CATEGORIES | tr ' ' '\n' | shuf -n 1); \
+	printf "$$CATEGORY"
+
+# Triage stamped items into categories (stamped → {category}/next)
+nimsforestwork-triage-issues:
+	@echo "🌲 Triage Stamped Items into Categories"
+	@echo "======================================="
+	@echo ""
+	@if [ ! -d docs/work/issues/stamped ]; then \
+		echo "❌ docs/work/issues/stamped/ not found. Run stamping first"; \
+		exit 1; \
+	fi
+	@SOFT_TIMEOUT=$${SOFT_TIMEOUT:-60}; \
+	HARD_TIMEOUT=$${HARD_TIMEOUT:-120}; \
+	START_TIME=$$(date +%s); \
+	echo "⏱️  Timeout settings: Soft=$$SOFT_TIMEOUT s, Hard=$$HARD_TIMEOUT s"; \
+	echo ""; \
+	trap 'echo "🧹 Cleaning up stale worktree references..."; git worktree prune 2>/dev/null || true' EXIT INT TERM; \
+	while true; do \
+		CURRENT_TIME=$$(date +%s); \
+		ELAPSED=$$((CURRENT_TIME - START_TIME)); \
+		echo "🔄 Triaging... ($$ELAPSED s elapsed)"; \
+		WORK_ITEMS=$$(find docs/work/issues/stamped -maxdepth 1 -type d ! -name stamped 2>/dev/null); \
+		if [ -z "$$WORK_ITEMS" ]; then \
+			echo "✅ No stamped items to triage - completed successfully"; \
+			break; \
+		fi; \
+		if [ $$ELAPSED -ge $$HARD_TIMEOUT ]; then \
+			echo "⏰ Hard timeout reached ($$HARD_TIMEOUT s) - stopping"; \
+			break; \
+		fi; \
+		if [ $$ELAPSED -ge $$SOFT_TIMEOUT ]; then \
+			echo "⏰ Soft timeout reached ($$SOFT_TIMEOUT s) - wrapping up"; \
+		fi; \
+		for ITEM_DIR in $$WORK_ITEMS; do \
+			ITEM_NAME=$$(basename "$$ITEM_DIR"); \
+			BRANCH_NAME="triage-$$ITEM_NAME"; \
+			WORKTREE_PATH="../triage-$$ITEM_NAME-worktree"; \
+			echo "🏷️ Attempting to triage: $$ITEM_NAME"; \
+			if git worktree add "$$WORKTREE_PATH" -b "$$BRANCH_NAME" main 2>/dev/null; then \
+				cd "$$WORKTREE_PATH"; \
+				if git push origin "$$BRANCH_NAME" 2>/dev/null; then \
+					CATEGORIES="bugs changerequests newfeatures improvedocumentation"; \
+					CATEGORY=$$(echo $$CATEGORIES | tr ' ' '\n' | shuf -n 1); \
+					echo "🎯 Category assigned: $$CATEGORY"; \
+					if [ -d "docs/work/issues/stamped/$$ITEM_NAME" ]; then \
+						mkdir -p "docs/work/$$CATEGORY/next"; \
+						git mv "docs/work/issues/stamped/$$ITEM_NAME/" "docs/work/$$CATEGORY/next/$$ITEM_NAME/"; \
+						git add -A; \
+						git commit -m "triage: categorize $$ITEM_NAME as $$CATEGORY"; \
+						git push origin "$$BRANCH_NAME"; \
+						echo "✅ Triaged: $$ITEM_NAME → $$CATEGORY/next/ (branch ready for merge)"; \
+					else \
+						echo "⚠️ Item $$ITEM_NAME not found in worktree"; \
+					fi; \
+					cd -; \
+					git worktree remove "$$WORKTREE_PATH"; \
+					git branch -D "$$BRANCH_NAME"; \
+				else \
+					echo "⏭️ Item $$ITEM_NAME already being triaged by another agent (lost race)"; \
+					cd -; \
+					git worktree remove "$$WORKTREE_PATH"; \
+					git branch -D "$$BRANCH_NAME"; \
+				fi; \
+			else \
+				echo "⏭️ Item $$ITEM_NAME already being triaged locally (worktree exists)"; \
+			fi; \
+		done; \
+		echo ""; \
+		echo "🔄 Checking for completed triage branches to merge..."; \
+		git fetch --all --quiet; \
+		REMOTE_BRANCHES=$$(git branch -r | grep 'origin/triage-' | sed 's|origin/||' | tr -d ' '); \
+		if [ -n "$$REMOTE_BRANCHES" ]; then \
+			echo "🏆 Attempting merger election..."; \
+			MERGER_BRANCH="triage-merger-lock"; \
+			if git checkout -b "$$MERGER_BRANCH" 2>/dev/null; then \
+				if git push origin "$$MERGER_BRANCH" 2>/dev/null; then \
+					echo "🏆 Elected as merger - processing all triage branches"; \
+					git checkout main; \
+					git pull origin main --quiet 2>/dev/null || true; \
+					for REMOTE_BRANCH in $$REMOTE_BRANCHES; do \
+						echo "🔍 Merging triage branch: $$REMOTE_BRANCH"; \
+						if git merge "origin/$$REMOTE_BRANCH" --no-edit 2>/dev/null; then \
+							echo "✅ Merged $$REMOTE_BRANCH to main (triaged item integrated)"; \
+							git push origin main 2>/dev/null || true; \
+							git push origin --delete "$$REMOTE_BRANCH" 2>/dev/null || true; \
+						else \
+							echo "⏳ $$REMOTE_BRANCH merge conflict - will retry on next cycle (keeping triage branch)"; \
+							git merge --abort 2>/dev/null || true; \
+						fi; \
+					done; \
+					echo "🏆 Merger role complete - cleaning up"; \
+					git push origin --delete "$$MERGER_BRANCH" 2>/dev/null || true; \
+				else \
+					echo "👥 Another machine won merger election - skipping merge phase"; \
+				fi; \
+				git branch -D "$$MERGER_BRANCH"; \
+			else \
+				echo "👥 Merger branch creation failed - another process may be merging"; \
+			fi; \
+		else \
+			echo "✅ No triage branches to merge"; \
+		fi; \
+	done; \
+	FINAL_TIME=$$(date +%s); \
+	FINAL_ELAPSED=$$((FINAL_TIME - START_TIME)); \
+	echo "🏁 Triaging process completed after $$FINAL_ELAPSED seconds"
+
+# Triage stamped items in parallel (stamped → {category}/next)
+nimsforestwork-triage-issues-parallel:
+	@echo "🌲 Triage Stamped Items in Parallel"
+	@echo "===================================="
+	@echo ""
+	@AGENTS=$${AGENTS:-3}; \
+	echo "🚀 Starting $$AGENTS parallel triaging agents..."; \
+	for p in $$(seq 1 $$AGENTS); do \
+		( $(MAKE) -f $(MAKEFILE_LIST) nimsforestwork-triage-issues & ); \
+	done && wait; \
+	echo "✅ All parallel triaging agents completed"
+
 # Claim work using branch-based locking with worktrees
 nimsforestwork-claim-work:
 	@echo "🌲 Claim Work with Branch-Based Locking"
