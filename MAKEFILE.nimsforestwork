@@ -158,13 +158,10 @@ nimsforestwork-init:
 	@echo "🌲 Initializing NimsforestWork folder structure..."
 	@echo "=================================================="
 	@echo ""
-	@echo "📁 Creating work management folders in docs/work/..."
-	@mkdir -p docs/work/issues/new docs/work/issues/stamped
-	@mkdir -p docs/work/bugs/next docs/work/bugs/readyforanalysis docs/work/bugs/inanalysis docs/work/bugs/readyfordevelopment docs/work/bugs/indevelopment docs/work/bugs/readyfortesting docs/work/bugs/intesting docs/work/bugs/signedoff docs/work/bugs/pendingfeedback
-	@mkdir -p docs/work/changerequests/next docs/work/changerequests/readyforanalysis docs/work/changerequests/inanalysis docs/work/changerequests/readyfordevelopment docs/work/changerequests/indevelopment docs/work/changerequests/readyfortesting docs/work/changerequests/intesting docs/work/changerequests/signedoff docs/work/changerequests/pendingfeedback
-	@mkdir -p docs/work/newfeatures/next docs/work/newfeatures/readyforanalysis docs/work/newfeatures/inanalysis docs/work/newfeatures/readyfordevelopment docs/work/newfeatures/indevelopment docs/work/newfeatures/readyfortesting docs/work/newfeatures/intesting docs/work/newfeatures/signedoff
-	@mkdir -p docs/work/improvedocumentation/next docs/work/improvedocumentation/readyforanalysis docs/work/improvedocumentation/inanalysis docs/work/improvedocumentation/readyfordevelopment docs/work/improvedocumentation/indevelopment docs/work/improvedocumentation/readyfortesting docs/work/improvedocumentation/intesting docs/work/improvedocumentation/signedoff
-	@mkdir -p docs/work/archive/production docs/work/archive/rejected
+	@echo "📁 Creating work management folders using nimsforestfolders..."
+	@$(MAKE) nimsforestfolders-create-folders \
+		JSON_FILE="docs/templates/work-structure.json" \
+		BASE_PATH="."
 	@echo "✅ Work folders created"
 	@echo ""
 	@echo "📝 Creating templates..."

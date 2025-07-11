@@ -120,6 +120,7 @@ setup-test-grooming:
 	git config user.email "test@nimsforestwork.dev" && \
 	mkdir -p tools/nimsforestwork && \
 	cp ../../../MAKEFILE.nimsforestwork tools/nimsforestwork/ && \
+	NIMSFORESTFOLDERS_INCLUDE_PATH="$(MAKEFILE_NIMSFORESTFOLDERS)" $(MAKE) -f $(MAKEFILE_NIMSFORESTFOLDERS) nimsforestfolders-addtomainmake && \
 	$(MAKE) -f tools/nimsforestwork/MAKEFILE.nimsforestwork nimsforestwork-init && \
 	git add . && \
 	git commit -m "Initial test setup with nimsforestwork" && \

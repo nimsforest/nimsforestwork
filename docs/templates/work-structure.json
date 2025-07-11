@@ -1,0 +1,46 @@
+{
+  "organization": {
+    "docs": {
+      "work": [
+        "issues/new",
+        "issues/stamped",
+        "bugs/next",
+        "bugs/readyforanalysis", 
+        "bugs/inanalysis",
+        "bugs/readyfordevelopment",
+        "bugs/indevelopment",
+        "bugs/readyfortesting",
+        "bugs/intesting",
+        "bugs/signedoff",
+        "bugs/pendingfeedback",
+        "changerequests/next",
+        "changerequests/readyforanalysis",
+        "changerequests/inanalysis", 
+        "changerequests/readyfordevelopment",
+        "changerequests/indevelopment",
+        "changerequests/readyfortesting",
+        "changerequests/intesting",
+        "changerequests/signedoff",
+        "changerequests/pendingfeedback",
+        "newfeatures/next",
+        "newfeatures/readyforanalysis",
+        "newfeatures/inanalysis",
+        "newfeatures/readyfordevelopment", 
+        "newfeatures/indevelopment",
+        "newfeatures/readyfortesting",
+        "newfeatures/intesting",
+        "newfeatures/signedoff",
+        "improvedocumentation/next",
+        "improvedocumentation/readyforanalysis",
+        "improvedocumentation/inanalysis",
+        "improvedocumentation/readyfordevelopment",
+        "improvedocumentation/indevelopment",
+        "improvedocumentation/readyfortesting",
+        "improvedocumentation/intesting",
+        "improvedocumentation/signedoff",
+        "archive/production",
+        "archive/rejected"
+      ]
+    }
+  }
+}
